@@ -434,16 +434,16 @@ const Dice = () => {
             <div className="bg-gray-900 rounded-lg p-8 mb-6">
               <div className="text-center">
                 {/* Long Thin Line with Arrow */}
-                <div className="relative w-96 h-16 mx-auto mb-6">
+                <div className="relative w-full max-w-96 h-16 mx-auto mb-6 overflow-hidden">
                   {/* Main line */}
-                  <div className="absolute top-8 left-0 right-0 h-2 bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 rounded-full"></div>
+                  <div className="absolute top-8 left-0 right-0 h-2 bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 rounded-full min-w-full"></div>
                   
                   {/* Target zone */}
                   <div 
                     className="absolute top-6 h-6 bg-blue-500 bg-opacity-40 border-2 border-blue-400 rounded-full"
                     style={{
-                      left: rollUnder ? '0px' : `${(100 - winChance) * 3.84}px`,
-                      width: `${winChance * 3.84}px`
+                      left: rollUnder ? '0%' : `${100 - winChance}%`,
+                      width: `${winChance}%`
                     }}
                   ></div>
                   
@@ -451,7 +451,7 @@ const Dice = () => {
                   {diceResult !== null && (
                     <div 
                       className="absolute transform -translate-x-1/2 transition-all duration-1000"
-                      style={{ left: `${(diceResult / 100) * 384}px`, top: '-8px' }}
+                      style={{ left: `${diceResult}%`, top: '-8px' }}
                     >
                       {/* Number above arrow */}
                       <div className={`text-lg font-bold mb-1 ${
