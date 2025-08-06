@@ -162,7 +162,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const userId = signUpData.user.id;
       const { error: insertError } = await supabase.from('users').insert({
         id: userId,
-        username,
+        username: username.toLowerCase(),
         email,
         balance: 1000,
         is_admin: false,
@@ -208,7 +208,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Error updating balance:', error);
       return;
     }
-    setUser({ ...user, balance: newBalance });
+    await fetchUser();
   };
 
   const updateStats = async (betAmount: number, winAmount: number) => {
@@ -255,7 +255,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return;
     }
 
-    setUser({ ...user, stats, experience, level });
+    await fetchUser();
   };
 
   const formatCurrency = (amount: number): string => {
@@ -283,7 +283,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Error updating currency:', error);
       return;
     }
-    setUser({ ...user, currency });
+    await fetchUser();
   };
 
   const getLevelRewards = (level: number): LevelReward => {
@@ -308,7 +308,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Error claiming daily bonus:', error);
       return 0;
     }
-    setUser({ ...user, lastDailyBonus: today, balance: newBalance });
+    await fetchUser();
     return reward;
   };
 
