@@ -11,13 +11,22 @@ import Crash from './pages/games/Crash';
 import Blackjack from './pages/games/Blackjack';
 import Plinko from './pages/games/Plinko';
 import SpinWheel from './pages/games/SpinWheel';
-import Analytics from './pages/Analytics';
 import Profile from './pages/Profile';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Admin from './pages/Admin';
 import Changelog from './pages/Changelog';
 import Suggestions from './pages/Suggestions';
+import DiceProbabilityCalculator from './pages/DiceProbabilityCalculator';
+import CrashGameStrategy from './pages/CrashGameStrategy';
+import MartingaleCalculator from './pages/MartingaleCalculator';
+import BlackjackBasicStrategy from './pages/BlackjackBasicStrategy';
+import CasinoOddsCalculator from './pages/CasinoOddsCalculator';
+import PlinkoStrategy from './pages/PlinkoStrategy';
+import Sitemap from './pages/Sitemap';
+import EarnBalance from './pages/EarnBalance';
+import LandingPages from './pages/LandingPages';
+import Donate from './pages/Donate';
 
 function App() {
   return (
@@ -35,13 +44,22 @@ function App() {
                 <Route path="/blackjack" element={<Blackjack />} />
                 <Route path="/plinko" element={<Plinko />} />
                 <Route path="/spin-wheel" element={<SpinWheel />} />
-                <Route path="/analytics" element={<Analytics />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/admin" element={<Admin />} />
                 <Route path="/changelog" element={<Changelog />} />
                 <Route path="/suggestions" element={<Suggestions />} />
+                <Route path="/dice-probability-calculator" element={<DiceProbabilityCalculator />} />
+                <Route path="/crash-game-strategy" element={<CrashGameStrategy />} />
+                <Route path="/martingale-calculator" element={<MartingaleCalculator />} />
+                <Route path="/blackjack-basic-strategy" element={<BlackjackBasicStrategy />} />
+                <Route path="/casino-odds-calculator" element={<CasinoOddsCalculator />} />
+                <Route path="/plinko-strategy" element={<PlinkoStrategy />} />
+                <Route path="/sitemap" element={<Sitemap />} />
+                <Route path="/earn-balance" element={<EarnBalance />} />
+                <Route path="/landing-pages" element={<LandingPages />} />
+                <Route path="/donate" element={<Donate />} />
               </Routes>
             </main>
             <Footer />

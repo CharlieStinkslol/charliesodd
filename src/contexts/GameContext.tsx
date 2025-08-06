@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { supabase } from '../lib/supabase';
+import { useAuth } from './AuthContext';
 
 interface GameBet {
   id: string;
@@ -21,15 +23,24 @@ interface GameStats {
   winRate: number;
 }
 
+interface GameSettings {
+  [gameName: string]: {
+    [key: string]: any;
+  };
+}
+
 interface GameContextType {
   bets: GameBet[];
   stats: GameStats;
   seed: string;
+  gameSettings: GameSettings;
   addBet: (bet: Omit<GameBet, 'id' | 'timestamp'>) => void;
   clearHistory: () => void;
   resetStats: () => void;
   setSeed: (seed: string) => void;
   generateSeededRandom: () => number;
+  saveGameSettings: (gameName: string, settings: any) => void;
+  loadGameSettings: (gameName: string) => any;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -50,15 +61,11 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   const [bets, setBets] = useState<GameBet[]>([]);
   const [seed, setSeedState] = useState<string>('');
   const [seedCounter, setSeedCounter] = useState<number>(0);
+  const [gameSettings, setGameSettings] = useState<GameSettings>({});
 
   useEffect(() => {
-    // Load saved bets
-    const savedBets = localStorage.getItem('charlies-odds-bets');
-    if (savedBets) {
-      setBets(JSON.parse(savedBets));
-    }
+    loadUserBets();
     
-    // Load or generate seed
     const savedSeed = localStorage.getItem('charlies-odds-seed');
     if (savedSeed) {
       setSeedState(savedSeed);
@@ -67,28 +74,98 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       setSeedState(newSeed);
       localStorage.setItem('charlies-odds-seed', newSeed);
     }
+
+    const savedSettings = localStorage.getItem('charlies-odds-game-settings');
+    if (savedSettings) {
+      setGameSettings(JSON.parse(savedSettings));
+    }
   }, []);
 
-  const addBet = (bet: Omit<GameBet, 'id' | 'timestamp'>) => {
-    const newBet: GameBet = {
-      ...bet,
-      id: Date.now().toString(),
-      timestamp: new Date(),
-    };
-    
-    const updatedBets = [newBet, ...bets].slice(0, 1000); // Keep last 1000 bets
-    setBets(updatedBets);
-    localStorage.setItem('charlies-odds-bets', JSON.stringify(updatedBets));
+  const loadUserBets = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: betsData, error } = await supabase
+        .from('bets')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1000);
+
+      if (error) throw error;
+
+      if (betsData) {
+        const formattedBets = betsData.map((bet: any) => ({
+          id: bet.id,
+          game: bet.game,
+          betAmount: Number(bet.bet_amount),
+          winAmount: Number(bet.win_amount),
+          multiplier: Number(bet.multiplier),
+          timestamp: new Date(bet.created_at),
+          result: bet.result
+        }));
+        setBets(formattedBets);
+      }
+    } catch (error) {
+      console.error('Error loading bets:', error);
+    }
+  };
+
+  const addBet = async (bet: Omit<GameBet, 'id' | 'timestamp'>) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Save to database
+      const { data: newBet, error } = await supabase
+        .from('bets')
+        .insert({
+          user_id: user.id,
+          game: bet.game,
+          bet_amount: bet.betAmount,
+          win_amount: bet.winAmount,
+          multiplier: bet.multiplier,
+          result: bet.result
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (newBet) {
+        const formattedBet: GameBet = {
+          id: newBet.id,
+          game: newBet.game,
+          betAmount: Number(newBet.bet_amount),
+          winAmount: Number(newBet.win_amount),
+          multiplier: Number(newBet.multiplier),
+          timestamp: new Date(newBet.created_at),
+          result: newBet.result
+        };
+        
+        setBets(prev => [formattedBet, ...prev].slice(0, 1000));
+      }
+    } catch (error) {
+      console.error('Error saving bet:', error);
+      // Fallback to local storage
+      const newBet: GameBet = {
+        ...bet,
+        id: Date.now().toString(),
+        timestamp: new Date(),
+      };
+      
+      const updatedBets = [newBet, ...bets].slice(0, 1000);
+      setBets(updatedBets);
+    }
   };
 
   const clearHistory = () => {
     setBets([]);
-    localStorage.removeItem('charlies-odds-bets');
   };
 
   const resetStats = () => {
     setBets([]);
-    localStorage.removeItem('charlies-odds-bets');
   };
 
   const setSeed = (newSeed: string) => {
@@ -98,7 +175,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   };
 
   const generateSeededRandom = (): number => {
-    // Simple seeded random number generator
     const seedStr = seed + seedCounter.toString();
     setSeedCounter(prev => prev + 1);
     
@@ -106,20 +182,76 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     for (let i = 0; i < seedStr.length; i++) {
       const char = seedStr.charCodeAt(i);
       hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
+      hash = hash & hash;
     }
     
     return Math.abs(hash) / 2147483647;
   };
 
+  const saveGameSettings = async (gameName: string, settings: any) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        // Fallback to localStorage
+        const updatedSettings = { ...gameSettings, [gameName]: settings };
+        setGameSettings(updatedSettings);
+        localStorage.setItem('charlies-odds-game-settings', JSON.stringify(updatedSettings));
+        return;
+      }
+
+      // Save to database
+      await supabase
+        .from('game_settings')
+        .upsert({
+          user_id: user.id,
+          game_name: gameName,
+          setting_name: 'default',
+          settings: settings
+        });
+    } catch (error) {
+      console.error('Error saving game settings:', error);
+    }
+    
+    // Also save locally for immediate access
+    const updatedSettings = {
+      ...gameSettings,
+      [gameName]: settings
+    };
+    setGameSettings(updatedSettings);
+    localStorage.setItem('charlies-odds-game-settings', JSON.stringify(updatedSettings));
+  };
+
+  const loadGameSettings = async (gameName: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: settingsData } = await supabase
+          .from('game_settings')
+          .select('settings')
+          .eq('user_id', user.id)
+          .eq('game_name', gameName)
+          .eq('setting_name', 'default')
+          .single();
+
+        if (settingsData) {
+          return settingsData.settings;
+        }
+      }
+    } catch (error) {
+      console.error('Error loading game settings:', error);
+    }
+    
+    return gameSettings[gameName] || {};
+  };
+
   const stats: GameStats = {
-    totalBets: bets.length,
-    totalWins: bets.filter(bet => bet.winAmount > bet.betAmount).length,
-    totalLosses: bets.filter(bet => bet.winAmount < bet.betAmount).length,
-    totalWagered: bets.reduce((sum, bet) => sum + bet.betAmount, 0),
-    totalWon: bets.reduce((sum, bet) => sum + bet.winAmount, 0),
-    biggestWin: Math.max(...bets.map(bet => bet.winAmount - bet.betAmount), 0),
-    biggestLoss: Math.min(...bets.map(bet => bet.winAmount - bet.betAmount), 0),
+    totalBets: bets.length || 0,
+    totalWins: bets.filter(bet => bet.winAmount > bet.betAmount).length || 0,
+    totalLosses: bets.filter(bet => bet.winAmount < bet.betAmount).length || 0,
+    totalWagered: bets.reduce((sum, bet) => sum + bet.betAmount, 0) || 0,
+    totalWon: bets.reduce((sum, bet) => sum + bet.winAmount, 0) || 0,
+    biggestWin: bets.length ? Math.max(...bets.map(bet => bet.winAmount - bet.betAmount), 0) : 0,
+    biggestLoss: bets.length ? Math.min(...bets.map(bet => bet.winAmount - bet.betAmount), 0) : 0,
     winRate: bets.length > 0 ? (bets.filter(bet => bet.winAmount > bet.betAmount).length / bets.length) * 100 : 0,
   };
 
@@ -127,11 +259,14 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     bets,
     stats,
     seed,
+    gameSettings,
     addBet,
     clearHistory,
     resetStats,
     setSeed,
     generateSeededRandom,
+    saveGameSettings,
+    loadGameSettings,
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Play as PlayIcon, Pause, Settings, RotateCcw } from 'lucide-react';
+import { Play as PlayIcon, Pause, Settings, RotateCcw, BarChart3 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useGame } from '../../contexts/GameContext';
+import { useGameAccess } from '../../hooks/useGameAccess';
+import GameDisabledMessage from '../../components/GameDisabledMessage';
+import DraggableLiveStats from '../../components/DraggableLiveStats';
+import RecentBets from '../../components/RecentBets';
+import SettingsManager from '../../components/SettingsManager';
 
 const SpinWheel = () => {
-  const { user, updateBalance, updateStats } = useAuth();
-  const { addBet, generateSeededRandom } = useGame();
+  const { user, updateBalance, updateStats, formatCurrency } = useAuth();
+  const { addBet, generateSeededRandom, bets } = useGame();
+  const { isEnabled, isLoading, validateBetAmount } = useGameAccess('spin-wheel');
   
   const [betAmount, setBetAmount] = useState(10);
   const [isSpinning, setIsSpinning] = useState(false);
@@ -22,6 +28,14 @@ const SpinWheel = () => {
   
   // Profit tracking
   const [sessionProfit, setSessionProfit] = useState(0);
+  const [profitHistory, setProfitHistory] = useState<{value: number, bet: number, timestamp: number}[]>([{value: 0, bet: 0, timestamp: Date.now()}]);
+  const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
+  const [betsPerSecond, setBetsPerSecond] = useState(0);
+  const [betError, setBetError] = useState<string>('');
+  
+  // UI states for draggable stats
+  const [showLiveStats, setShowLiveStats] = useState(false);
+
   const [sessionStats, setSessionStats] = useState({
     totalBets: 0,
     wins: 0,
@@ -31,6 +45,23 @@ const SpinWheel = () => {
     longestLossStreak: 0,
     isWinStreak: true
   });
+
+  // Calculate bets per second
+  useEffect(() => {
+    if (sessionStartTime && sessionStats.totalBets > 0) {
+      const elapsed = (Date.now() - sessionStartTime) / 1000;
+      setBetsPerSecond(sessionStats.totalBets / elapsed);
+    }
+  }, [sessionStats.totalBets, sessionStartTime]);
+
+  const roundBetAmount = (amount: number) => {
+    // Round to 2 decimal places for amounts under $1
+    if (amount < 1) return Math.round(amount * 100) / 100;
+    // Round to 1 decimal place for amounts under $10
+    if (amount < 10) return Math.round(amount * 10) / 10;
+    // Round to nearest whole number for larger amounts
+    return Math.round(amount);
+  };
 
   // Wheel segments with multipliers
   const segments = [
@@ -51,6 +82,15 @@ const SpinWheel = () => {
   const spinWheel = () => {
     if (!user || betAmount > user.balance) return;
 
+    // Validate bet amount against admin settings
+    const validation = validateBetAmount(betAmount);
+    if (!validation.isValid) {
+      setBetError(validation.message || 'Invalid bet amount');
+      setTimeout(() => setBetError(''), 3000);
+      return;
+    }
+
+    setBetError('');
     setIsSpinning(true);
     setResult(null);
 
@@ -80,6 +120,7 @@ const SpinWheel = () => {
       // Update profit tracking
       const newProfit = sessionProfit + profit;
       setSessionProfit(newProfit);
+      setProfitHistory(prev => [...prev, {value: newProfit, bet: sessionStats.totalBets + 1, timestamp: Date.now()}]);
       
       // Update session statistics
       setSessionStats(prev => {
@@ -126,7 +167,37 @@ const SpinWheel = () => {
     setIsAutoMode(true);
     setAutoBetRunning(true);
     setAutoBetCount(infiniteBet ? Infinity : maxAutoBets);
+    if (!sessionStartTime) {
+      setSessionStartTime(Date.now());
+    }
+  };
+
+  const stopAutoPlay = () => {
+    setIsAutoMode(false);
+    setAutoBetRunning(false);
+    setAutoBetCount(0);
+  };
+
+  const saveSettings = () => {
+    const settings = {
+      betAmount,
+      maxAutoBets,
+      infiniteBet,
+      instantBet
+    };
+    saveGameSettings('spin-wheel', settings);
+  };
+
+  const loadSettings = (settings: any) => {
+    if (settings.betAmount) setBetAmount(settings.betAmount);
+    if (settings.maxAutoBets) setMaxAutoBets(settings.maxAutoBets);
+    if (settings.infiniteBet !== undefined) setInfiniteBet(settings.infiniteBet);
+    if (settings.instantBet !== undefined) setInstantBet(settings.instantBet);
+  };
+
+  const resetStats = () => {
     setSessionProfit(0);
+    setProfitHistory([{value: 0, bet: 0, timestamp: Date.now()}]);
     setSessionStats({
       totalBets: 0,
       wins: 0,
@@ -136,28 +207,44 @@ const SpinWheel = () => {
       longestLossStreak: 0,
       isWinStreak: true
     });
-  };
-
-  const stopAutoPlay = () => {
-    setIsAutoMode(false);
-    setAutoBetRunning(false);
-    setAutoBetCount(0);
+    setSessionStartTime(Date.now());
+    setBetsPerSecond(0);
   };
 
   useEffect(() => {
     if (isAutoMode && autoBetRunning && (autoBetCount > 0 || infiniteBet) && !isSpinning) {
       const timer = setTimeout(() => {
+        // Validate bet amount before auto-betting
+        const validation = validateBetAmount(betAmount);
+        if (!validation.isValid) {
+          stopAutoPlay();
+          setBetError(validation.message || 'Invalid bet amount');
+          setTimeout(() => setBetError(''), 3000);
+          return;
+        }
         spinWheel();
       }, 1000);
       return () => clearTimeout(timer);
     }
   }, [isAutoMode, autoBetRunning, autoBetCount, isSpinning]);
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-white">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isEnabled) {
+    return <GameDisabledMessage gameName="Spin Wheel" />;
+  }
+
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Game Panel */}
-        <div className="lg:col-span-2">
+        <div>
           <div className="bg-gray-800 rounded-lg p-6 mb-6">
             <div className="flex items-center mb-6">
               <PlayIcon className="w-8 h-8 text-purple-400 mr-3" />
@@ -251,47 +338,7 @@ const SpinWheel = () => {
               </div>
             </div>
             
-            {/* Statistics Display */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <div className="bg-gray-900 rounded-lg p-3 text-center">
-                <div className="text-lg font-bold text-white">{sessionStats.totalBets}</div>
-                <div className="text-xs text-gray-400">Total Bets</div>
-              </div>
-              <div className="bg-gray-900 rounded-lg p-3 text-center">
-                <div className="text-lg font-bold text-green-400">{sessionStats.wins}</div>
-                <div className="text-xs text-gray-400">Wins</div>
-              </div>
-              <div className="bg-gray-900 rounded-lg p-3 text-center">
-                <div className="text-lg font-bold text-red-400">{sessionStats.losses}</div>
-                <div className="text-xs text-gray-400">Losses</div>
-              </div>
-              <div className="bg-gray-900 rounded-lg p-3 text-center">
-                <div className={`text-lg font-bold ${sessionProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  ${sessionProfit.toFixed(2)}
-                </div>
-                <div className="text-xs text-gray-400">Session Profit</div>
-              </div>
-            </div>
-            
-            {/* Streaks */}
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-gray-900 rounded-lg p-3 text-center">
-                <div className={`text-lg font-bold ${sessionStats.isWinStreak ? 'text-green-400' : 'text-red-400'}`}>
-                  {sessionStats.currentStreak}
-                </div>
-                <div className="text-xs text-gray-400">
-                  Current {sessionStats.isWinStreak ? 'Win' : 'Loss'} Streak
-                </div>
-              </div>
-              <div className="bg-gray-900 rounded-lg p-3 text-center">
-                <div className="text-lg font-bold text-green-400">{sessionStats.longestWinStreak}</div>
-                <div className="text-xs text-gray-400">Best Win Streak</div>
-              </div>
-              <div className="bg-gray-900 rounded-lg p-3 text-center">
-                <div className="text-lg font-bold text-red-400">{sessionStats.longestLossStreak}</div>
-                <div className="text-xs text-gray-400">Worst Loss Streak</div>
-              </div>
-            </div>
+            <RecentBets bets={bets.filter(bet => bet.game === 'Spin Wheel')} formatCurrency={formatCurrency} maxBets={5} />
           </div>
         </div>
         
@@ -313,6 +360,9 @@ const SpinWheel = () => {
                 step="0.01"
                 disabled={isSpinning || autoBetRunning}
               />
+              {betError && (
+                <div className="mt-2 text-red-400 text-sm">{betError}</div>
+              )}
             </div>
             
             <div className="grid grid-cols-2 gap-2 mb-4">
@@ -337,6 +387,15 @@ const SpinWheel = () => {
                 Balance: ${user.balance.toFixed(2)}
               </div>
             )}
+            
+            {/* Live Stats Toggle */}
+            <button
+              onClick={() => setShowLiveStats(true)}
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center justify-center mt-2"
+            >
+              <BarChart3 className="w-5 h-5 mr-2" />
+              Show Live Stats
+            </button>
             
             <div className="space-y-2">
               <button
@@ -376,6 +435,19 @@ const SpinWheel = () => {
             </div>
           </div>
           
+
+          <SettingsManager
+            currentGame="spin-wheel"
+            currentSettings={{
+              betAmount,
+              maxAutoBets,
+              infiniteBet,
+              instantBet
+            }}
+            onLoadSettings={loadSettings}
+            onSaveSettings={saveSettings}
+          />
+
           {/* Auto-bet Settings */}
           <div className="bg-gray-800 rounded-lg p-6">
             <div className="flex items-center justify-between mb-4">
@@ -436,8 +508,85 @@ const SpinWheel = () => {
               </div>
             </div>
           </div>
+          
+          {/* Game Statistics */}
+          <div className="bg-gray-800 rounded-lg p-6">
+            <h3 className="text-lg font-bold text-white mb-4">Session Statistics</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-gray-900 rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-white">{sessionStats.totalBets}</div>
+                <div className="text-sm text-gray-400">Total Spins</div>
+              </div>
+              <div className="bg-gray-900 rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-green-400">{sessionStats.wins}</div>
+                <div className="text-sm text-gray-400">Wins</div>
+              </div>
+              <div className="bg-gray-900 rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-red-400">{sessionStats.losses}</div>
+                <div className="text-sm text-gray-400">Losses</div>
+              </div>
+              <div className="bg-gray-900 rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-yellow-400">
+                  {sessionStats.totalBets > 0 ? ((sessionStats.wins / sessionStats.totalBets) * 100).toFixed(1) : 0}%
+                </div>
+                <div className="text-sm text-gray-400">Win Rate</div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Session Profit */}
+          <div className="bg-gray-800 rounded-lg p-6">
+            <h3 className="text-lg font-bold text-white mb-4">Session Profit</h3>
+            <div className="text-center">
+              <div className={`text-4xl font-bold mb-2 ${sessionProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {formatCurrency(sessionProfit)}
+              </div>
+              <div className="text-gray-400">Current Session</div>
+            </div>
+          </div>
+          
+          {/* Spin Wheel Tips */}
+          <div className="bg-gray-800 rounded-lg p-6">
+            <h3 className="text-lg font-bold text-white mb-4">Spin Wheel Tips</h3>
+            <div className="space-y-3 text-sm text-gray-300">
+              <div className="flex items-start">
+                <div className="w-2 h-2 bg-purple-400 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                <span>Each spin is completely random and independent</span>
+              </div>
+              <div className="flex items-start">
+                <div className="w-2 h-2 bg-purple-400 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                <span>Higher multipliers appear less frequently</span>
+              </div>
+              <div className="flex items-start">
+                <div className="w-2 h-2 bg-purple-400 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                <span>Use consistent bet sizing for steady results</span>
+              </div>
+              <div className="flex items-start">
+                <div className="w-2 h-2 bg-purple-400 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                <span>Auto-spin helps maintain discipline</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
+      
+      {/* Recent Bets moved to bottom */}
+      <div className="mt-8">
+        <RecentBets bets={bets.filter(bet => bet.game === 'Spin Wheel')} formatCurrency={formatCurrency} maxBets={5} />
+      </div>
+      
+      {/* Draggable Live Stats */}
+      <DraggableLiveStats
+        sessionStats={sessionStats}
+        sessionProfit={sessionProfit}
+        profitHistory={profitHistory}
+        onReset={resetStats}
+        formatCurrency={formatCurrency}
+        startTime={sessionStartTime}
+        betsPerSecond={betsPerSecond}
+        isOpen={showLiveStats}
+        onClose={() => setShowLiveStats(false)}
+      />
     </div>
   );
 };

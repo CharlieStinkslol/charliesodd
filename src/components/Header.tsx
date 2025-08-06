@@ -1,145 +1,166 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, BarChart3, User, LogOut } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { 
+  Menu, X, User, LogOut, Settings, BarChart3, 
+  Gamepad2, Home, MessageSquare, Calendar, Gift,
+  Crown, Shield, Zap, Target, TrendingUp, Play
+} from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user, logout, formatCurrency } = useAuth();
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+    setIsMenuOpen(false);
+  };
 
   const games = [
-    { name: 'Dice', path: '/dice' },
-    { name: 'Limbo', path: '/limbo' },
-    { name: 'Crash', path: '/crash' },
-    { name: 'Blackjack', path: '/blackjack' },
-    { name: 'Plinko', path: '/plinko' },
-    { name: 'Spin Wheel', path: '/spin-wheel' },
+    { name: 'Dice', path: '/dice', icon: <Target className="w-4 h-4" /> },
+    { name: 'Limbo', path: '/limbo', icon: <TrendingUp className="w-4 h-4" /> },
+    { name: 'Crash', path: '/crash', icon: <Zap className="w-4 h-4" /> },
+    { name: 'Blackjack', path: '/blackjack', icon: <Target className="w-4 h-4" /> },
+    { name: 'Plinko', path: '/plinko', icon: <BarChart3 className="w-4 h-4" /> },
+    { name: 'Spin Wheel', path: '/spin-wheel', icon: <Play className="w-4 h-4" /> },
   ];
 
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <header className="fixed top-0 left-0 right-0 bg-gray-800 border-b border-gray-700 z-50">
+    <header className="bg-gray-800 border-b border-gray-700 fixed top-0 left-0 right-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
-            <div className="relative group">
-              <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 rounded-xl flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-all duration-300">
-                <div className="w-8 h-8 bg-gradient-to-br from-yellow-300 to-orange-400 rounded-lg flex items-center justify-center relative overflow-hidden">
-                  <span className="text-gray-900 font-black text-xs tracking-wider">CO</span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-20 transform -skew-x-12 group-hover:translate-x-8 transition-transform duration-700"></div>
-                </div>
-              </div>
-              <div className="absolute -inset-1 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-xl blur opacity-30 group-hover:opacity-60 transition-opacity duration-300"></div>
+            <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm">CO</span>
             </div>
-            <div className="flex flex-col">
-              <span className="text-xl font-black text-white tracking-tight">CharliesOdds</span>
-              <span className="text-xs text-yellow-400 font-semibold -mt-1">DEMO CASINO</span>
-            </div>
+            <span className="text-white font-bold text-xl hidden sm:block">CharliesOdds</span>
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-4">
-            <Link 
-              to="/" 
-              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                isActive('/') ? 'bg-yellow-400 text-gray-900' : 'text-gray-300 hover:text-white'
+          <nav className="hidden lg:flex items-center space-x-8">
+            <Link
+              to="/"
+              className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                isActive('/') ? 'text-yellow-400 bg-gray-700' : 'text-gray-300 hover:text-white hover:bg-gray-700'
               }`}
             >
-              Home
+              <Home className="w-4 h-4" />
+              <span>Home</span>
             </Link>
-            
+
+            {/* Games Dropdown */}
             <div className="relative group">
-              <button className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">
-                Games
+              <button className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700 transition-colors">
+                <Gamepad2 className="w-4 h-4" />
+                <span>Games</span>
               </button>
-              <div className="absolute left-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                <div className="py-2">
-                  {games.map((game) => (
-                    <Link
-                      key={game.path}
-                      to={game.path}
-                      className={`block px-4 py-2 text-sm transition-colors ${
-                        isActive(game.path) ? 'bg-yellow-400 text-gray-900' : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                      }`}
-                    >
-                      {game.name}
-                    </Link>
-                  ))}
-                </div>
+              <div className="absolute top-full left-0 mt-1 w-48 bg-gray-800 border border-gray-700 rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                {games.map((game) => (
+                  <Link
+                    key={game.path}
+                    to={game.path}
+                    className={`flex items-center space-x-2 px-4 py-2 text-sm hover:bg-gray-700 transition-colors ${
+                      isActive(game.path) ? 'text-yellow-400' : 'text-gray-300 hover:text-white'
+                    }`}
+                  >
+                    {game.icon}
+                    <span>{game.name}</span>
+                  </Link>
+                ))}
               </div>
             </div>
-            
-            <Link 
-              to="/analytics" 
-              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                isActive('/analytics') ? 'bg-yellow-400 text-gray-900' : 'text-gray-300 hover:text-white'
+
+            <Link
+              to="/earn-balance"
+              className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                isActive('/earn-balance') ? 'text-yellow-400 bg-gray-700' : 'text-gray-300 hover:text-white hover:bg-gray-700'
               }`}
             >
-              Analytics
+              <Gift className="w-4 h-4" />
+              <span>Earn Balance</span>
             </Link>
-            
-            <Link 
-              to="/changelog" 
-              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                isActive('/changelog') ? 'bg-yellow-400 text-gray-900' : 'text-gray-300 hover:text-white'
+
+            <Link
+              to="/suggestions"
+              className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                isActive('/suggestions') ? 'text-yellow-400 bg-gray-700' : 'text-gray-300 hover:text-white hover:bg-gray-700'
               }`}
             >
-              Changelog
+              <MessageSquare className="w-4 h-4" />
+              <span>Suggestions</span>
             </Link>
-            
-            <Link 
-              to="/suggestions" 
-              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                isActive('/suggestions') ? 'bg-yellow-400 text-gray-900' : 'text-gray-300 hover:text-white'
+
+            <Link
+              to="/changelog"
+              className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                isActive('/changelog') ? 'text-yellow-400 bg-gray-700' : 'text-gray-300 hover:text-white hover:bg-gray-700'
               }`}
             >
-              Suggestions
+              <Calendar className="w-4 h-4" />
+              <span>Changelog</span>
             </Link>
           </nav>
 
           {/* User Menu */}
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="flex items-center space-x-4">
             {user ? (
-              <>
-                <div className="flex items-center space-x-2 text-white">
-                  <User className="w-4 h-4" />
-                  <span className="text-sm">{user.username}</span>
-                  <span className="text-yellow-400 font-semibold">${user.balance.toFixed(2)}</span>
+              <div className="flex items-center space-x-4">
+                <div className="hidden sm:flex items-center space-x-2 bg-gray-700 px-3 py-1 rounded-lg">
+                  <span className="text-yellow-400 font-semibold">{formatCurrency(user.balance)}</span>
                 </div>
-                <Link
-                  to="/profile"
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    isActive('/profile') ? 'bg-yellow-400 text-gray-900' : 'text-gray-300 hover:text-white'
-                  }`}
-                >
-                  Profile
-                </Link>
-                {user.isAdmin && (
-                  <Link
-                    to="/admin"
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      isActive('/admin') ? 'bg-red-400 text-gray-900' : 'text-red-400 hover:text-red-300'
-                    }`}
-                  >
-                    Admin
-                  </Link>
-                )}
-                <button
-                  onClick={logout}
-                  className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center"
-                >
-                  <LogOut className="w-4 h-4 mr-1" />
-                  Logout
-                </button>
-              </>
+                <div className="relative group">
+                  <button className="flex items-center space-x-2 text-gray-300 hover:text-white">
+                    <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
+                      <User className="w-4 h-4 text-white" />
+                    </div>
+                    <span className="hidden sm:block">{user.username}</span>
+                    {user.isAdmin && <Crown className="w-4 h-4 text-yellow-400" />}
+                  </button>
+                  <div className="absolute top-full right-0 mt-1 w-48 bg-gray-800 border border-gray-700 rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                    <Link
+                      to="/profile"
+                      className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 transition-colors"
+                    >
+                      <User className="w-4 h-4" />
+                      <span>Profile</span>
+                    </Link>
+                    <Link
+                      to="/analytics"
+                      className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 transition-colors"
+                    >
+                      <BarChart3 className="w-4 h-4" />
+                      <span>Analytics</span>
+                    </Link>
+                    {user.isAdmin && (
+                      <Link
+                        to="/admin"
+                        className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 transition-colors"
+                      >
+                        <Settings className="w-4 h-4" />
+                        <span>Admin Panel</span>
+                      </Link>
+                    )}
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 transition-colors w-full text-left"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>Logout</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
             ) : (
-              <>
+              <div className="hidden sm:flex items-center space-x-4">
                 <Link
                   to="/login"
-                  className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
+                  className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
                 >
                   Login
                 </Link>
@@ -149,134 +170,138 @@ const Header = () => {
                 >
                   Sign Up
                 </Link>
-              </>
+              </div>
             )}
-          </div>
 
-          {/* Mobile menu button */}
-          <button
-            className="md:hidden p-2 rounded-md text-gray-300 hover:text-white"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-          >
-            {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile Menu */}
-      {isMenuOpen && (
-        <div className="md:hidden bg-gray-800 border-t border-gray-700">
-          <div className="px-2 pt-2 pb-3 space-y-1">
-            <Link
-              to="/"
-              className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
-                isActive('/') ? 'bg-yellow-400 text-gray-900' : 'text-gray-300 hover:text-white hover:bg-gray-700'
-              }`}
-              onClick={() => setIsMenuOpen(false)}
+            {/* Mobile menu button */}
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="lg:hidden text-gray-300 hover:text-white"
             >
-              Home
-            </Link>
-            {games.map((game) => (
+              {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Navigation */}
+        {isMenuOpen && (
+          <div className="lg:hidden border-t border-gray-700 py-4">
+            <div className="space-y-2">
               <Link
-                key={game.path}
-                to={game.path}
+                to="/"
                 className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
-                  isActive(game.path) ? 'bg-yellow-400 text-gray-900' : 'text-gray-300 hover:text-white hover:bg-gray-700'
+                  isActive('/') ? 'text-yellow-400 bg-gray-700' : 'text-gray-300 hover:text-white hover:bg-gray-700'
                 }`}
                 onClick={() => setIsMenuOpen(false)}
               >
-                {game.name}
+                Home
               </Link>
-            ))}
-            <Link
-              to="/analytics"
-              className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
-                isActive('/analytics') ? 'bg-yellow-400 text-gray-900' : 'text-gray-300 hover:text-white hover:bg-gray-700'
-              }`}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Analytics
-            </Link>
-            <Link
-              to="/changelog"
-              className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
-                isActive('/changelog') ? 'bg-yellow-400 text-gray-900' : 'text-gray-300 hover:text-white hover:bg-gray-700'
-              }`}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Changelog
-            </Link>
-            <Link
-              to="/suggestions"
-              className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
-                isActive('/suggestions') ? 'bg-yellow-400 text-gray-900' : 'text-gray-300 hover:text-white hover:bg-gray-700'
-              }`}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Suggestions
-            </Link>
-            
-            {/* Mobile User Menu */}
-            {user ? (
-              <>
-                <div className="px-3 py-2 text-white border-t border-gray-700 mt-2 pt-4">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <User className="w-4 h-4" />
-                    <span>{user.username}</span>
-                    <span className="text-yellow-400 font-semibold">${user.balance.toFixed(2)}</span>
-                  </div>
+
+              <div className="px-3 py-2">
+                <div className="text-gray-400 text-sm font-medium mb-2">Games</div>
+                <div className="space-y-1 ml-4">
+                  {games.map((game) => (
+                    <Link
+                      key={game.path}
+                      to={game.path}
+                      className={`block px-3 py-2 rounded-md text-sm transition-colors ${
+                        isActive(game.path) ? 'text-yellow-400 bg-gray-700' : 'text-gray-300 hover:text-white hover:bg-gray-700'
+                      }`}
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      {game.name}
+                    </Link>
+                  ))}
                 </div>
-                <Link
-                  to="/profile"
-                  className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
-                    isActive('/profile') ? 'bg-yellow-400 text-gray-900' : 'text-gray-300 hover:text-white hover:bg-gray-700'
-                  }`}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Profile
-                </Link>
-                {user.isAdmin && (
+              </div>
+
+              <Link
+                to="/earn-balance"
+                className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
+                  isActive('/earn-balance') ? 'text-yellow-400 bg-gray-700' : 'text-gray-300 hover:text-white hover:bg-gray-700'
+                }`}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Earn Balance
+              </Link>
+
+              <Link
+                to="/suggestions"
+                className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
+                  isActive('/suggestions') ? 'text-yellow-400 bg-gray-700' : 'text-gray-300 hover:text-white hover:bg-gray-700'
+                }`}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Suggestions
+              </Link>
+
+              <Link
+                to="/changelog"
+                className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
+                  isActive('/changelog') ? 'text-yellow-400 bg-gray-700' : 'text-gray-300 hover:text-white hover:bg-gray-700'
+                }`}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Changelog
+              </Link>
+
+              {user ? (
+                <div className="border-t border-gray-700 pt-4 mt-4">
+                  <div className="px-3 py-2 text-sm text-gray-400">
+                    Balance: {formatCurrency(user.balance)}
+                  </div>
                   <Link
-                    to="/admin"
-                    className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
-                      isActive('/admin') ? 'bg-red-400 text-gray-900' : 'text-red-400 hover:text-red-300 hover:bg-gray-700'
-                    }`}
+                    to="/profile"
+                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700 transition-colors"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Admin
+                    Profile
                   </Link>
-                )}
-                <button
-                  onClick={() => {
-                    logout();
-                    setIsMenuOpen(false);
-                  }}
-                  className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <>
-                <Link
-                  to="/login"
-                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700 border-t border-gray-700 mt-2 pt-4"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Login
-                </Link>
-                <Link
-                  to="/register"
-                  className="block px-3 py-2 rounded-md text-base font-medium bg-yellow-400 text-gray-900 hover:bg-yellow-500 mx-3 mt-2"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Sign Up
-                </Link>
-              </>
-            )}
+                  <Link
+                    to="/analytics"
+                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700 transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Analytics
+                  </Link>
+                  {user.isAdmin && (
+                    <Link
+                      to="/admin"
+                      className="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700 transition-colors"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Admin Panel
+                    </Link>
+                  )}
+                  <button
+                    onClick={handleLogout}
+                    className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700 transition-colors"
+                  >
+                    Logout
+                  </button>
+                </div>
+              ) : (
+                <div className="border-t border-gray-700 pt-4 mt-4 space-y-2">
+                  <Link
+                    to="/login"
+                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700 transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    to="/register"
+                    className="block px-3 py-2 rounded-md text-base font-medium bg-yellow-400 text-gray-900 hover:bg-yellow-500 transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Sign Up
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </header>
   );
 };

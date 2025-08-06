@@ -62,10 +62,23 @@ const Footer = () => {
               <h3 className="text-white font-semibold mb-4">Support</h3>
               <ul className="space-y-2">
                 <li><a href="mailto:support@charliesodds.com" className="text-gray-400 hover:text-white transition-colors">Contact Support</a></li>
+                <li><Link to="/donate" className="text-gray-400 hover:text-white transition-colors">Donate</Link></li>
                 <li><a href="#" className="text-gray-400 hover:text-white transition-colors">FAQ</a></li>
                 <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Responsible Gaming</a></li>
                 <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Terms of Service</a></li>
                 <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Privacy Policy</a></li>
+                <li><Link to="/sitemap" className="text-gray-400 hover:text-white transition-colors">Sitemap</Link></li>
+              </ul>
+            </div>
+            
+            {/* SEO Landing Pages */}
+            <div>
+              <h3 className="text-white font-semibold mb-4">Resources</h3>
+              <ul className="space-y-2">
+                <li><Link to="/landing-pages" className="text-gray-400 hover:text-white transition-colors">Landing Pages</Link></li>
+                <li><Link to="/earn-balance" className="text-gray-400 hover:text-white transition-colors">Earn Balance</Link></li>
+                <li><Link to="/sitemap" className="text-gray-400 hover:text-white transition-colors">Sitemap</Link></li>
+                <li><Link to="/donate" className="text-gray-400 hover:text-white transition-colors">Donate</Link></li>
               </ul>
             </div>
           </div>
