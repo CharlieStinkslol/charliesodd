@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { supabase } from '../lib/supabase';
 
 // Types for user statistics
 interface UserStats {
@@ -15,7 +16,6 @@ export interface User {
   id: string;
   username: string;
   email: string;
-  password: string;
   balance: number;
   isAdmin: boolean;
   createdAt: string;
@@ -43,14 +43,14 @@ const LEVEL_REWARDS: LevelReward[] = [
 
 interface AuthContextType {
   user: User | null;
-  login: (usernameOrEmail: string, password: string) => boolean;
+  login: (usernameOrEmail: string, password: string) => Promise<boolean>;
   register: (username: string, email: string, password: string) => Promise<boolean>;
-  logout: () => void;
-  updateBalance: (amount: number) => void;
-  updateStats: (betAmount: number, winAmount: number) => void;
+  logout: () => Promise<void>;
+  updateBalance: (amount: number) => Promise<void>;
+  updateStats: (betAmount: number, winAmount: number) => Promise<void>;
   formatCurrency: (amount: number) => string;
-  setCurrency: (currency: User['currency']) => void;
-  claimDailyBonus: () => number;
+  setCurrency: (currency: User['currency']) => Promise<void>;
+  claimDailyBonus: () => Promise<number>;
   getNextLevelRequirement: () => number;
   getLevelRewards: (level: number) => LevelReward;
 }
@@ -69,99 +69,149 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-const USER_KEY = 'charlies-odds-current-user';
-const USERS_KEY = 'charlies-odds-users';
-
 const xpForLevel = (level: number) => 100 * level;
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
 
-  useEffect(() => {
-    const stored = localStorage.getItem(USER_KEY);
-    if (stored) {
-      setUser(JSON.parse(stored));
+  const fetchUser = async () => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      setUser(null);
+      return;
     }
-  }, []);
 
-  const saveUser = (updated: User | null) => {
-    setUser(updated);
-    if (updated) {
-      localStorage.setItem(USER_KEY, JSON.stringify(updated));
-      const users: User[] = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
-      const index = users.findIndex(u => u.id === updated.id);
-      if (index !== -1) {
-        users[index] = updated;
-        localStorage.setItem(USERS_KEY, JSON.stringify(users));
-      }
-    } else {
-      localStorage.removeItem(USER_KEY);
+    const { data, error } = await supabase
+      .from('users')
+      .select('*, user_stats(*)')
+      .eq('id', authUser.id)
+      .single();
+
+    if (error || !data) {
+      console.error('Error fetching user:', error);
+      setUser(null);
+      return;
     }
-  };
 
-  const login = (usernameOrEmail: string, password: string): boolean => {
-    const users: User[] = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
-    const found = users.find(u =>
-      (u.username.toLowerCase() === usernameOrEmail.toLowerCase() ||
-       u.email.toLowerCase() === usernameOrEmail.toLowerCase()) &&
-      u.password === password
-    );
-
-    if (found) {
-      saveUser(found);
-      return true;
-    }
-    return false;
-  };
-
-  const register = async (username: string, email: string, password: string): Promise<boolean> => {
-    const users: User[] = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
-    const existing = users.find(u =>
-      u.username.toLowerCase() === username.toLowerCase() ||
-      u.email.toLowerCase() === email.toLowerCase()
-    );
-    if (existing) return false;
-
-    const newUser: User = {
-      id: Date.now().toString(),
-      username,
-      email,
-      password,
-      balance: 1000,
-      isAdmin: false,
-      createdAt: new Date().toISOString(),
-      currency: 'USD',
-      level: 1,
-      experience: 0,
-      lastDailyBonus: null,
+    const profile: User = {
+      id: data.id,
+      username: data.username,
+      email: data.email,
+      balance: Number(data.balance),
+      isAdmin: data.is_admin,
+      createdAt: data.created_at,
+      currency: data.currency,
+      level: data.level,
+      experience: data.experience,
+      lastDailyBonus: data.last_daily_bonus,
       stats: {
-        totalBets: 0,
-        totalWins: 0,
-        totalLosses: 0,
-        totalWagered: 0,
-        totalWon: 0,
-        biggestWin: 0,
-        biggestLoss: 0
+        totalBets: data.user_stats?.total_bets ?? 0,
+        totalWins: data.user_stats?.total_wins ?? 0,
+        totalLosses: data.user_stats?.total_losses ?? 0,
+        totalWagered: Number(data.user_stats?.total_wagered ?? 0),
+        totalWon: Number(data.user_stats?.total_won ?? 0),
+        biggestWin: Number(data.user_stats?.biggest_win ?? 0),
+        biggestLoss: Number(data.user_stats?.biggest_loss ?? 0)
       }
     };
 
-    users.push(newUser);
-    localStorage.setItem(USERS_KEY, JSON.stringify(users));
-    saveUser(newUser);
-    return true;
+    setUser(profile);
   };
 
-  const logout = () => {
-    saveUser(null);
+  useEffect(() => {
+    fetchUser();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      fetchUser();
+    });
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const login = async (usernameOrEmail: string, password: string): Promise<boolean> => {
+    try {
+      let email = usernameOrEmail;
+      if (!usernameOrEmail.includes('@')) {
+        const { data, error } = await supabase
+          .from('users')
+          .select('email')
+          .eq('username', usernameOrEmail.toLowerCase())
+          .single();
+        if (error || !data) return false;
+        email = data.email;
+      }
+
+      const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      if (authError) return false;
+      await fetchUser();
+      return true;
+    } catch (err) {
+      console.error('Login error:', err);
+      return false;
+    }
   };
 
-  const updateBalance = (amount: number) => {
+  const register = async (username: string, email: string, password: string): Promise<boolean> => {
+    try {
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password
+      });
+      if (signUpError || !signUpData.user) return false;
+
+      const userId = signUpData.user.id;
+      const { error: insertError } = await supabase.from('users').insert({
+        id: userId,
+        username,
+        email,
+        balance: 1000,
+        is_admin: false,
+        level: 1,
+        experience: 0,
+        last_daily_bonus: null,
+        currency: 'USD'
+      });
+      if (insertError) return false;
+
+      await supabase.from('user_stats').insert({
+        user_id: userId,
+        total_bets: 0,
+        total_wins: 0,
+        total_losses: 0,
+        total_wagered: 0,
+        total_won: 0,
+        biggest_win: 0,
+        biggest_loss: 0
+      });
+
+      await fetchUser();
+      return true;
+    } catch (err) {
+      console.error('Registration error:', err);
+      return false;
+    }
+  };
+
+  const logout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+  };
+
+  const updateBalance = async (amount: number) => {
     if (!user) return;
-    const updated = { ...user, balance: user.balance + amount };
-    saveUser(updated);
+    const newBalance = user.balance + amount;
+    const { error } = await supabase
+      .from('users')
+      .update({ balance: newBalance })
+      .eq('id', user.id);
+    if (error) {
+      console.error('Error updating balance:', error);
+      return;
+    }
+    setUser({ ...user, balance: newBalance });
   };
 
-  const updateStats = (betAmount: number, winAmount: number) => {
+  const updateStats = async (betAmount: number, winAmount: number) => {
     if (!user) return;
     const stats = { ...user.stats };
     stats.totalBets += 1;
@@ -173,7 +223,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (profit > stats.biggestWin) stats.biggestWin = profit;
     if (profit < stats.biggestLoss) stats.biggestLoss = profit;
 
-    // XP and leveling
     let experience = user.experience + Math.floor(betAmount / 10);
     let level = user.level;
     let requirement = xpForLevel(level);
@@ -183,8 +232,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       requirement = xpForLevel(level);
     }
 
-    const updated = { ...user, stats, experience, level };
-    saveUser(updated);
+    const { error: statsError } = await supabase
+      .from('user_stats')
+      .update({
+        total_bets: stats.totalBets,
+        total_wins: stats.totalWins,
+        total_losses: stats.totalLosses,
+        total_wagered: stats.totalWagered,
+        total_won: stats.totalWon,
+        biggest_win: stats.biggestWin,
+        biggest_loss: stats.biggestLoss
+      })
+      .eq('user_id', user.id);
+
+    const { error: userError } = await supabase
+      .from('users')
+      .update({ experience, level })
+      .eq('id', user.id);
+
+    if (statsError || userError) {
+      console.error('Error updating stats:', statsError || userError);
+      return;
+    }
+
+    setUser({ ...user, stats, experience, level });
   };
 
   const formatCurrency = (amount: number): string => {
@@ -202,10 +273,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return `${symbol}${amount.toFixed(decimals)}`;
   };
 
-  const setCurrency = (currency: User['currency']) => {
+  const setCurrency = async (currency: User['currency']) => {
     if (!user) return;
-    const updated = { ...user, currency };
-    saveUser(updated);
+    const { error } = await supabase
+      .from('users')
+      .update({ currency })
+      .eq('id', user.id);
+    if (error) {
+      console.error('Error updating currency:', error);
+      return;
+    }
+    setUser({ ...user, currency });
   };
 
   const getLevelRewards = (level: number): LevelReward => {
@@ -216,13 +294,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return reward;
   };
 
-  const claimDailyBonus = (): number => {
+  const claimDailyBonus = async (): Promise<number> => {
     if (!user) return 0;
     const today = new Date().toDateString();
     if (user.lastDailyBonus === today) return 0;
     const reward = getLevelRewards(user.level).dailyBonus;
-    const updated = { ...user, lastDailyBonus: today, balance: user.balance + reward };
-    saveUser(updated);
+    const newBalance = user.balance + reward;
+    const { error } = await supabase
+      .from('users')
+      .update({ last_daily_bonus: today, balance: newBalance })
+      .eq('id', user.id);
+    if (error) {
+      console.error('Error claiming daily bonus:', error);
+      return 0;
+    }
+    setUser({ ...user, lastDailyBonus: today, balance: newBalance });
     return reward;
   };
 
