@@ -19,20 +19,28 @@ const Logo: React.FC<LogoProps> = ({ size = 'md', className = '' }) => {
         className="w-full h-full"
         xmlns="http://www.w3.org/2000/svg"
       >
-        {/* Background circle with gradient */}
         <defs>
+          {/* Main gradient */}
           <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#fbbf24" />
             <stop offset="50%" stopColor="#f59e0b" />
             <stop offset="100%" stopColor="#d97706" />
           </linearGradient>
-          <linearGradient id="chipGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          
+          {/* Inner gradient */}
+          <linearGradient id="innerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#1f2937" />
+            <stop offset="100%" stopColor="#374151" />
+          </linearGradient>
+          
+          {/* Text gradient */}
+          <linearGradient id="textGradient" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#ffffff" />
             <stop offset="100%" stopColor="#e5e7eb" />
           </linearGradient>
         </defs>
         
-        {/* Main circle background */}
+        {/* Outer ring */}
         <circle
           cx="50"
           cy="50"
@@ -42,49 +50,53 @@ const Logo: React.FC<LogoProps> = ({ size = 'md', className = '' }) => {
           strokeWidth="2"
         />
         
-        {/* Casino chip design */}
-        <circle
-          cx="50"
-          cy="50"
-          r="35"
-          fill="url(#chipGradient)"
-          stroke="#374151"
-          strokeWidth="1"
-        />
-        
         {/* Inner circle */}
         <circle
           cx="50"
           cy="50"
-          r="25"
-          fill="none"
-          stroke="#374151"
+          r="38"
+          fill="url(#innerGradient)"
+          stroke="#fbbf24"
           strokeWidth="1"
-          strokeDasharray="3,2"
         />
         
-        {/* Center design - CO letters */}
+        {/* Decorative ring */}
+        <circle
+          cx="50"
+          cy="50"
+          r="30"
+          fill="none"
+          stroke="#fbbf24"
+          strokeWidth="1"
+          strokeDasharray="4,2"
+          opacity="0.6"
+        />
+        
+        {/* Center design - CO letters with modern styling */}
         <text
           x="50"
           y="58"
           textAnchor="middle"
-          fontSize="20"
+          fontSize="18"
           fontWeight="bold"
-          fill="#1f2937"
+          fill="url(#textGradient)"
           fontFamily="Arial, sans-serif"
+          letterSpacing="1"
         >
           CO
         </text>
         
-        {/* Decorative elements */}
-        <circle cx="30" cy="30" r="3" fill="#fbbf24" />
-        <circle cx="70" cy="30" r="3" fill="#fbbf24" />
-        <circle cx="30" cy="70" r="3" fill="#fbbf24" />
-        <circle cx="70" cy="70" r="3" fill="#fbbf24" />
+        {/* Decorative dots in cardinal directions */}
+        <circle cx="50" cy="20" r="2.5" fill="#fbbf24" />
+        <circle cx="80" cy="50" r="2.5" fill="#fbbf24" />
+        <circle cx="50" cy="80" r="2.5" fill="#fbbf24" />
+        <circle cx="20" cy="50" r="2.5" fill="#fbbf24" />
         
-        {/* Dice dots for casino theme */}
-        <circle cx="25" cy="50" r="1.5" fill="#374151" />
-        <circle cx="75" cy="50" r="1.5" fill="#374151" />
+        {/* Small accent dots */}
+        <circle cx="35" cy="35" r="1.5" fill="#f59e0b" opacity="0.8" />
+        <circle cx="65" cy="35" r="1.5" fill="#f59e0b" opacity="0.8" />
+        <circle cx="35" cy="65" r="1.5" fill="#f59e0b" opacity="0.8" />
+        <circle cx="65" cy="65" r="1.5" fill="#f59e0b" opacity="0.8" />
       </svg>
     </div>
   );

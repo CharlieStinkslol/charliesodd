@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { supabase } from '../lib/supabase';
 
 interface GameSettings {
   enabled: boolean;
@@ -12,15 +13,20 @@ export const useGameAccess = (gameName: string) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const loadGameSettings = () => {
-      const savedSettings = localStorage.getItem('charlies-odds-admin-game-settings');
-      if (savedSettings) {
-        const allSettings = JSON.parse(savedSettings);
-        const settings = allSettings[gameName];
-        if (settings) {
-          setGameSettings(settings);
+    const loadGameSettings = async () => {
+      if (!supabase) {
+        // Fallback to localStorage if Supabase not available
+        const savedSettings = localStorage.getItem('charlies-odds-admin-game-settings');
+        if (savedSettings) {
+          const allSettings = JSON.parse(savedSettings);
+          const settings = allSettings[gameName];
+          setGameSettings(settings || {
+            enabled: true,
+            minBet: 0.01,
+            maxBet: 1000,
+            houseEdge: 1
+          });
         } else {
-          // Default settings if not found
           setGameSettings({
             enabled: true,
             minBet: 0.01,
@@ -28,8 +34,35 @@ export const useGameAccess = (gameName: string) => {
             houseEdge: 1
           });
         }
-      } else {
-        // Default settings if no admin settings exist
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('admin_game_config')
+          .select('*')
+          .eq('game_name', gameName)
+          .single();
+
+        if (error || !data) {
+          // Use default settings if not found
+          setGameSettings({
+            enabled: true,
+            minBet: 0.01,
+            maxBet: 1000,
+            houseEdge: 1
+          });
+        } else {
+          setGameSettings({
+            enabled: data.enabled,
+            minBet: data.min_bet,
+            maxBet: data.max_bet,
+            houseEdge: data.house_edge
+          });
+        }
+      } catch (error) {
+        console.error('Error loading game settings:', error);
         setGameSettings({
           enabled: true,
           minBet: 0.01,
@@ -37,6 +70,7 @@ export const useGameAccess = (gameName: string) => {
           houseEdge: 1
         });
       }
+      
       setIsLoading(false);
     };
 

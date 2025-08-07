@@ -29,12 +29,9 @@ const Suggestions = () => {
         .from('suggestions')
         .select(`
           *,
-          profiles!suggestions_user_id_fkey(username),
-          admin_responses(
-            *,
-            profiles!admin_responses_admin_id_fkey(username)
-          ),
-          suggestion_votes!left(vote_type)
+          profiles:user_id(username),
+          admin_responses(*),
+          suggestion_votes(vote_type, user_id)
         `)
         .order('created_at', { ascending: false });
 
@@ -45,11 +42,13 @@ const Suggestions = () => {
       }
 
       // Process the data to match our interface
-      const processedSuggestions: Suggestion[] = data.map(suggestion => ({
+      const processedSuggestions: Suggestion[] = (data || []).map(suggestion => ({
         ...suggestion,
         profiles: suggestion.profiles,
         admin_responses: suggestion.admin_responses,
-        user_vote: user ? suggestion.suggestion_votes?.find((vote: any) => vote.user_id === user.id) : undefined
+        user_vote: user && suggestion.suggestion_votes ? 
+          suggestion.suggestion_votes.find((vote: any) => vote.user_id === user.id) : 
+          undefined
       }));
 
       setSuggestions(processedSuggestions);

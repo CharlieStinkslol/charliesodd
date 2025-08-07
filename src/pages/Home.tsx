@@ -238,13 +238,6 @@ const Home = () => {
                     </div>
                     <div className="absolute -inset-1 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-xl blur opacity-30 group-hover:opacity-60 transition-opacity duration-300"></div>
                   </Link>
-                  <Link
-                    to="/login"
-                    className="bg-gray-800 hover:bg-gray-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 border border-gray-600 hover:border-gray-500 flex items-center justify-center"
-                  >
-                    <Play className="w-6 h-6 mr-2" />
-                    Demo Login
-                  </Link>
                 </>
               ) : (
                 <Link
@@ -276,7 +269,7 @@ const Home = () => {
         </div>
         
         {/* Earn Balance Highlight Section */}
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 bg-gradient-to-r from-gray-800/50 to-gray-900/50 rounded-3xl mt-16 border border-gray-700 overflow-hidden">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 bg-gradient-to-r from-gray-800/50 to-gray-900/50 rounded-3xl mt-24 border border-gray-700 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/10 to-orange-500/10"></div>
           
           <div className="relative z-10">
@@ -371,7 +364,7 @@ const Home = () => {
         )}
 
         {/* Trust Indicators */}
-        <div className="mb-20">
+        <div className="mb-20 mt-24">
           <div className="text-center mb-12">
             <h2 className="text-4xl font-bold text-white mb-4">
               Trusted by <span className="text-yellow-400">50,000+</span> Players Worldwide

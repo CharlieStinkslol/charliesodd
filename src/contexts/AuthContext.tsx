@@ -181,13 +181,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     try {
       // Check if username already exists
-      const { data: existingProfile } = await supabase
+      const { data: existingProfile, error: checkError } = await supabase
         .from('profiles')
         .select('username')
         .eq('username', username)
         .single();
 
-      if (existingProfile) {
+      if (existingProfile && !checkError) {
         return false;
       }
 
@@ -212,6 +212,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         .insert({
           id: data.user.id,
           username,
+          email,
           balance: 1000,
           is_admin: false,
           level: 1,

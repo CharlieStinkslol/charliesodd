@@ -121,21 +121,22 @@ const Admin = () => {
       
       if (usersData) setUsers(usersData);
 
-      // Load game settings
-      const savedGameSettings = localStorage.getItem('charlies-odds-admin-game-settings');
-      if (savedGameSettings) {
-        setGameSettings(JSON.parse(savedGameSettings));
-      } else {
-        // Default game settings
-        const defaultSettings = {
-          dice: { enabled: true, minBet: 0.01, maxBet: 1000, houseEdge: 1 },
-          limbo: { enabled: true, minBet: 0.01, maxBet: 1000, houseEdge: 1 },
-          crash: { enabled: true, minBet: 0.01, maxBet: 1000, houseEdge: 1 },
-          blackjack: { enabled: true, minBet: 0.01, maxBet: 1000, houseEdge: 0.5 },
-          plinko: { enabled: true, minBet: 0.01, maxBet: 1000, houseEdge: 2 },
-          'spin-wheel': { enabled: true, minBet: 0.01, maxBet: 1000, houseEdge: 5 }
-        };
-        setGameSettings(defaultSettings);
+      // Load game settings from database
+      const { data: gameConfigData } = await supabase
+        .from('admin_game_config')
+        .select('*');
+
+      if (gameConfigData) {
+        const settings: any = {};
+        gameConfigData.forEach(config => {
+          settings[config.game_name] = {
+            enabled: config.enabled,
+            minBet: config.min_bet,
+            maxBet: config.max_bet,
+            houseEdge: config.house_edge
+          };
+        });
+        setGameSettings(settings);
       }
     } catch (error) {
       console.error('Error loading admin data:', error);
@@ -152,16 +153,51 @@ const Admin = () => {
     }
   };
 
-  const updateGameSetting = (game: string, setting: string, value: any) => {
-    const updatedSettings = {
-      ...gameSettings,
-      [game]: {
-        ...gameSettings[game],
-        [setting]: value
+  const updateGameSetting = async (game: string, setting: string, value: any) => {
+    if (!supabase || !user) return;
+
+    try {
+      const updateData: any = { updated_by: user.id };
+      
+      switch (setting) {
+        case 'enabled':
+          updateData.enabled = value;
+          break;
+        case 'minBet':
+          updateData.min_bet = value;
+          break;
+        case 'maxBet':
+          updateData.max_bet = value;
+          break;
+        case 'houseEdge':
+          updateData.house_edge = value;
+          break;
       }
-    };
-    setGameSettings(updatedSettings);
-    localStorage.setItem('charlies-odds-admin-game-settings', JSON.stringify(updatedSettings));
+
+      const { error } = await supabase
+        .from('admin_game_config')
+        .upsert({
+          game_name: game,
+          ...updateData
+        });
+
+      if (error) {
+        console.error('Error updating game setting:', error);
+        return;
+      }
+
+      // Update local state
+      const updatedSettings = {
+        ...gameSettings,
+        [game]: {
+          ...gameSettings[game],
+          [setting]: value
+        }
+      };
+      setGameSettings(updatedSettings);
+    } catch (error) {
+      console.error('Error updating game setting:', error);
+    }
   };
 
   const updateSEOSetting = (page: string, field: string, value: string) => {

@@ -98,7 +98,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         return;
       }
 
-      const formattedBets: GameBet[] = data.map(bet => ({
+      const formattedBets: GameBet[] = (data || []).map(bet => ({
         id: bet.id,
         game: bet.game_name,
         betAmount: bet.bet_amount,
@@ -130,7 +130,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       }
 
       const settings: GameSettings = {};
-      data.forEach(setting => {
+      (data || []).forEach(setting => {
         if (!settings[setting.game_name]) {
           settings[setting.game_name] = {};
         }
