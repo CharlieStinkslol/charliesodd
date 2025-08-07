@@ -6,6 +6,7 @@ import {
   Crown, Shield, Zap, Target, TrendingUp, Play
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import Logo from './Logo';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -36,9 +37,7 @@ const Header = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">CO</span>
-            </div>
+            <Logo size="sm" />
             <span className="text-white font-bold text-xl hidden sm:block">CharliesOdds</span>
           </Link>
 

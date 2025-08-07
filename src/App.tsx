@@ -1,8 +1,10 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { GameProvider } from './contexts/GameContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { useAuth } from './contexts/AuthContext';
+import { useEffect } from 'react';
+import { useSEO } from './hooks/useSEO';
 import LoadingScreen from './components/LoadingScreen';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -30,8 +32,20 @@ import EarnBalance from './pages/EarnBalance';
 import LandingPages from './pages/LandingPages';
 import Donate from './pages/Donate';
 
+// Component to scroll to top on route change
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+};
+
 const AppContent = () => {
   const { loading } = useAuth();
+  useSEO(); // Apply SEO settings
 
   if (loading) {
     return <LoadingScreen />;
@@ -40,6 +54,7 @@ const AppContent = () => {
   return (
     <div className="min-h-screen bg-gray-900">
       <Header />
+      <ScrollToTop />
       <main className="pt-16">
         <Routes>
           <Route path="/" element={<Home />} />

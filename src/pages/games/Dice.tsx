@@ -841,59 +841,83 @@ const Dice = () => {
                   {strategy === 'fixed' && (
                     <div className="bg-gray-700 rounded-lg p-3">
                       <h5 className="text-white font-medium mb-3">Fixed Strategy Settings</h5>
-                      <div className="grid grid-cols-2 gap-4">
+                      
+                      <div className="space-y-4">
+                        <div className="bg-gray-600 rounded-lg p-3">
+                          <h6 className="text-white font-medium mb-2">When You WIN:</h6>
                         <div>
-                          <label className="block text-sm text-gray-300 mb-1">On Win</label>
                           <select
                             value={onWin}
                             onChange={(e) => setOnWin(e.target.value as any)}
-                            className="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded-lg text-white"
+                            className="w-full px-3 py-2 bg-gray-500 border border-gray-400 rounded-lg text-white mb-2"
                             disabled={autoBetRunning}
                           >
                             <option value="reset">Reset to Base</option>
-                            <option value="increase">Increase Bet</option>
-                            <option value="decrease">Decrease Bet</option>
+                            <option value="increase">Increase Bet Amount</option>
+                            <option value="decrease">Decrease Bet Amount</option>
                           </select>
+                          {(onWin === 'increase' || onWin === 'decrease') && (
+                            <div>
+                              <label className="block text-sm text-gray-300 mb-1">
+                                {onWin === 'increase' ? 'Increase' : 'Decrease'} by: {onWin === 'increase' ? increaseBy : decreaseBy}%
+                              </label>
+                              <input
+                                type="number"
+                                value={onWin === 'increase' ? increaseBy : decreaseBy}
+                                onChange={(e) => onWin === 'increase' ? setIncreaseBy(Number(e.target.value)) : setDecreaseBy(Number(e.target.value))}
+                                className="w-full px-3 py-2 bg-gray-500 border border-gray-400 rounded-lg text-white"
+                                min="1"
+                                max={onWin === 'decrease' ? "99" : undefined}
+                                disabled={autoBetRunning}
+                              />
+                              <p className="text-xs text-gray-400 mt-1">
+                                {onWin === 'increase' 
+                                  ? `Bet will become $${(betAmount * (1 + increaseBy / 100)).toFixed(2)} after a win`
+                                  : `Bet will become $${(betAmount * (1 - decreaseBy / 100)).toFixed(2)} after a win`
+                                }
+                              </p>
+                            </div>
+                          )}
                         </div>
+                        </div>
+                        
+                        <div className="bg-gray-600 rounded-lg p-3">
+                          <h6 className="text-white font-medium mb-2">When You LOSE:</h6>
                         <div>
-                          <label className="block text-sm text-gray-300 mb-1">On Loss</label>
                           <select
                             value={onLoss}
                             onChange={(e) => setOnLoss(e.target.value as any)}
-                            className="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded-lg text-white"
+                            className="w-full px-3 py-2 bg-gray-500 border border-gray-400 rounded-lg text-white mb-2"
                             disabled={autoBetRunning}
                           >
                             <option value="reset">Reset to Base</option>
-                            <option value="increase">Increase Bet</option>
-                            <option value="decrease">Decrease Bet</option>
+                            <option value="increase">Increase Bet Amount</option>
+                            <option value="decrease">Decrease Bet Amount</option>
                           </select>
+                          {(onLoss === 'increase' || onLoss === 'decrease') && (
+                            <div>
+                              <label className="block text-sm text-gray-300 mb-1">
+                                {onLoss === 'increase' ? 'Increase' : 'Decrease'} by: {onLoss === 'increase' ? increaseBy : decreaseBy}%
+                              </label>
+                              <input
+                                type="number"
+                                value={onLoss === 'increase' ? increaseBy : decreaseBy}
+                                onChange={(e) => onLoss === 'increase' ? setIncreaseBy(Number(e.target.value)) : setDecreaseBy(Number(e.target.value))}
+                                className="w-full px-3 py-2 bg-gray-500 border border-gray-400 rounded-lg text-white"
+                                min="1"
+                                max={onLoss === 'decrease' ? "99" : undefined}
+                                disabled={autoBetRunning}
+                              />
+                              <p className="text-xs text-gray-400 mt-1">
+                                {onLoss === 'increase' 
+                                  ? `Bet will become $${(betAmount * (1 + increaseBy / 100)).toFixed(2)} after a loss`
+                                  : `Bet will become $${(betAmount * (1 - decreaseBy / 100)).toFixed(2)} after a loss`
+                                }
+                              </p>
+                            </div>
+                          )}
                         </div>
                       </div>
-                      
-                      <div className="grid grid-cols-2 gap-4 mt-3">
-                        <div>
-                          <label className="block text-sm text-gray-300 mb-1">Increase By (%)</label>
-                          <input
-                            type="number"
-                            value={increaseBy}
-                            onChange={(e) => setIncreaseBy(Number(e.target.value))}
-                            className="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded-lg text-white"
-                            min="1"
-                            disabled={autoBetRunning}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm text-gray-300 mb-1">Decrease By (%)</label>
-                          <input
-                            type="number"
-                            value={decreaseBy}
-                            onChange={(e) => setDecreaseBy(Number(e.target.value))}
-                            className="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded-lg text-white"
-                            min="1"
-                            max="99"
-                            disabled={autoBetRunning}
-                          />
-                        </div>
                       </div>
                     </div>
                   )}
@@ -993,17 +1017,6 @@ const Dice = () => {
                 </div>
                 <div className="text-sm text-gray-400">Win Rate</div>
               </div>
-            </div>
-          </div>
-          
-          {/* Session Profit */}
-          <div className="bg-gray-800 rounded-lg p-6">
-            <h3 className="text-lg font-bold text-white mb-4">Session Profit</h3>
-            <div className="text-center">
-              <div className={`text-4xl font-bold mb-2 ${sessionProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {formatCurrency(sessionProfit)}
-              </div>
-              <div className="text-gray-400">Current Session</div>
             </div>
           </div>
           

@@ -344,7 +344,7 @@ const Home = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* User Stats */}
         {user && (
-          <div className="bg-gradient-to-r from-gray-800 to-gray-700 rounded-2xl p-8 mb-16 border border-gray-600 shadow-2xl">
+          <div className="bg-gradient-to-r from-gray-800 to-gray-700 rounded-2xl p-8 mt-16 mb-16 border border-gray-600 shadow-2xl">
             <div className="text-center mb-6">
               <h2 className="text-3xl font-bold text-white mb-2">Welcome back, {user.username}! 🎉</h2>
               <p className="text-gray-300">Your gaming journey continues...</p>
@@ -369,6 +369,35 @@ const Home = () => {
             </div>
           </div>
         )}
+
+        {/* Trust Indicators */}
+        <div className="mb-20">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-white mb-4">
+              Trusted by <span className="text-yellow-400">50,000+</span> Players Worldwide
+            </h2>
+            <p className="text-xl text-gray-300">Join the largest community of demo casino enthusiasts</p>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            <div className="text-center">
+              <div className="text-4xl font-bold text-yellow-400 mb-2">50K+</div>
+              <div className="text-gray-400">Active Players</div>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl font-bold text-green-400 mb-2">5M+</div>
+              <div className="text-gray-400">Games Played</div>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl font-bold text-blue-400 mb-2">99.9%</div>
+              <div className="text-gray-400">Uptime</div>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl font-bold text-purple-400 mb-2">24/7</div>
+              <div className="text-gray-400">Support</div>
+            </div>
+          </div>
+        </div>
 
         {/* Games Showcase */}
         <div className="mb-20">
@@ -424,6 +453,196 @@ const Home = () => {
           </div>
         </div>
 
+        {/* Interactive Demo Section */}
+        <div className="mb-20">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-white mb-4">
+              See CharliesOdds in <span className="text-yellow-400">Action</span>
+            </h2>
+            <p className="text-xl text-gray-300">Experience our advanced features with this interactive preview</p>
+          </div>
+          
+          <div className="bg-gray-800 rounded-3xl p-8 border border-gray-700 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-400 rounded-full opacity-5 transform translate-x-32 -translate-y-32"></div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10">
+              <div>
+                <h3 className="text-3xl font-bold text-white mb-6">
+                  Real-Time <span className="text-yellow-400">Analytics</span> Dashboard
+                </h3>
+                <p className="text-xl text-gray-300 mb-8">
+                  Track every bet, analyze patterns, and optimize your strategy with our professional-grade analytics tools.
+                </p>
+                
+                <div className="space-y-4">
+                  <div className="flex items-center">
+                    <CheckCircle className="w-6 h-6 text-green-400 mr-3" />
+                    <span className="text-white">Live profit/loss tracking</span>
+                  </div>
+                  <div className="flex items-center">
+                    <CheckCircle className="w-6 h-6 text-green-400 mr-3" />
+                    <span className="text-white">Advanced statistical analysis</span>
+                  </div>
+                  <div className="flex items-center">
+                    <CheckCircle className="w-6 h-6 text-green-400 mr-3" />
+                    <span className="text-white">Strategy performance metrics</span>
+                  </div>
+                  <div className="flex items-center">
+                    <CheckCircle className="w-6 h-6 text-green-400 mr-3" />
+                    <span className="text-white">Exportable data and reports</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-gray-900 rounded-2xl p-6 border border-gray-600">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-white font-semibold">Live Session Data</h4>
+                  <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="bg-gray-800 rounded-lg p-3 text-center">
+                    <div className="text-2xl font-bold text-white">1,247</div>
+                    <div className="text-xs text-gray-400">Total Bets</div>
+                  </div>
+                  <div className="bg-gray-800 rounded-lg p-3 text-center">
+                    <div className="text-2xl font-bold text-green-400">68.3%</div>
+                    <div className="text-xs text-gray-400">Win Rate</div>
+                  </div>
+                </div>
+                
+                <div className="h-24 bg-gray-800 rounded-lg p-2 mb-4">
+                  <div className="h-full flex items-end justify-between">
+                    {Array.from({ length: 20 }).map((_, i) => (
+                      <div 
+                        key={i}
+                        className={`w-2 ${Math.random() > 0.5 ? 'bg-green-500' : 'bg-red-500'} rounded-t-sm animate-pulse`}
+                        style={{ 
+                          height: `${Math.random() * 80 + 20}%`,
+                          animationDelay: `${i * 100}ms`
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="text-center">
+                  <div className="text-lg font-bold text-yellow-400">+$347.50</div>
+                  <div className="text-sm text-gray-400">Session Profit</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Feature Showcase */}
+        <div className="mb-20">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-white mb-4">
+              Powerful Features for <span className="text-orange-400">Serious Players</span>
+            </h2>
+            <p className="text-xl text-gray-300">Everything you need to master casino gaming</p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 hover:border-yellow-400 transition-all duration-300 group">
+              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <Rocket className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-3">Advanced Auto-Betting</h3>
+              <p className="text-gray-300 text-sm mb-4">Sophisticated algorithms including Martingale, Fibonacci, and custom strategies with real-time adjustments.</p>
+              <ul className="text-xs text-gray-400 space-y-1">
+                <li>• Infinite betting mode</li>
+                <li>• Stop-loss protection</li>
+                <li>• Strategy backtesting</li>
+              </ul>
+            </div>
+            
+            <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 hover:border-yellow-400 transition-all duration-300 group">
+              <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <BarChart3 className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-3">Professional Analytics</h3>
+              <p className="text-gray-300 text-sm mb-4">Comprehensive statistics, profit graphs, and performance tracking that rivals professional trading platforms.</p>
+              <ul className="text-xs text-gray-400 space-y-1">
+                <li>• Real-time profit tracking</li>
+                <li>• Advanced charting tools</li>
+                <li>• Export capabilities</li>
+              </ul>
+            </div>
+            
+            <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 hover:border-yellow-400 transition-all duration-300 group">
+              <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <Shield className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-3">Provably Fair Gaming</h3>
+              <p className="text-gray-300 text-sm mb-4">Transparent algorithms and cryptographic verification ensure every game result is completely fair and verifiable.</p>
+              <ul className="text-xs text-gray-400 space-y-1">
+                <li>• Cryptographic seeds</li>
+                <li>• Open-source algorithms</li>
+                <li>• Result verification</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* Social Proof */}
+        <div className="mb-20">
+          <div className="bg-gradient-to-r from-gray-800 to-gray-700 rounded-3xl p-12 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/5 to-orange-500/5"></div>
+            
+            <div className="relative z-10 text-center">
+              <h2 className="text-4xl font-bold text-white mb-8">
+                Join the Elite Gaming Community
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Users className="w-8 h-8 text-gray-900" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2">Active Community</h3>
+                  <p className="text-gray-300 text-sm">Connect with thousands of players sharing strategies and tips</p>
+                </div>
+                
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Trophy className="w-8 h-8 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2">Leaderboards</h3>
+                  <p className="text-gray-300 text-sm">Compete for top positions in weekly and monthly challenges</p>
+                </div>
+                
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-gradient-to-r from-purple-400 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Lightbulb className="w-8 h-8 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2">Educational Content</h3>
+                  <p className="text-gray-300 text-sm">Learn from expert guides, tutorials, and strategy breakdowns</p>
+                </div>
+              </div>
+              
+              <div className="bg-gray-900 rounded-2xl p-6 max-w-2xl mx-auto">
+                <h4 className="text-white font-semibold mb-4">Recent Community Activity</h4>
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-300">Alex just hit 1000x on Plinko!</span>
+                    <span className="text-yellow-400">2 min ago</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-300">Sarah shared a new Martingale strategy</span>
+                    <span className="text-yellow-400">5 min ago</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-300">Mike completed the "High Roller" achievement</span>
+                    <span className="text-yellow-400">8 min ago</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Features Section */}
         <div className="mb-20">
           <div className="text-center mb-12">
@@ -449,6 +668,57 @@ const Home = () => {
                 <p className="text-gray-300 leading-relaxed text-sm sm:text-base flex-grow">{feature.description}</p>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Comparison Section */}
+        <div className="mb-20">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-white mb-4">
+              Why CharliesOdds vs <span className="text-red-400">Other Platforms</span>?
+            </h2>
+            <p className="text-xl text-gray-300">See what makes us the #1 choice for serious players</p>
+          </div>
+          
+          <div className="bg-gray-800 rounded-2xl p-8 border border-gray-700">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-700">
+                    <th className="text-left py-4 text-white font-semibold">Feature</th>
+                    <th className="text-center py-4 text-yellow-400 font-semibold">CharliesOdds</th>
+                    <th className="text-center py-4 text-gray-400 font-semibold">Other Platforms</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-gray-700">
+                    <td className="py-4 text-gray-300">Starting Balance</td>
+                    <td className="text-center py-4 text-green-400 font-semibold">$1,000</td>
+                    <td className="text-center py-4 text-gray-400">$100-500</td>
+                  </tr>
+                  <tr className="border-b border-gray-700">
+                    <td className="py-4 text-gray-300">Auto-Betting Strategies</td>
+                    <td className="text-center py-4 text-green-400 font-semibold">6+ Advanced</td>
+                    <td className="text-center py-4 text-gray-400">Basic/None</td>
+                  </tr>
+                  <tr className="border-b border-gray-700">
+                    <td className="py-4 text-gray-300">Real-Time Analytics</td>
+                    <td className="text-center py-4 text-green-400 font-semibold">Professional Grade</td>
+                    <td className="text-center py-4 text-gray-400">Basic Stats</td>
+                  </tr>
+                  <tr className="border-b border-gray-700">
+                    <td className="py-4 text-gray-300">Game Variety</td>
+                    <td className="text-center py-4 text-green-400 font-semibold">6 Unique Games</td>
+                    <td className="text-center py-4 text-gray-400">2-3 Games</td>
+                  </tr>
+                  <tr>
+                    <td className="py-4 text-gray-300">Educational Content</td>
+                    <td className="text-center py-4 text-green-400 font-semibold">Extensive Guides</td>
+                    <td className="text-center py-4 text-gray-400">Limited/None</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
@@ -486,6 +756,42 @@ const Home = () => {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Security & Trust */}
+        <div className="mb-20">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-white mb-4">
+              Built with <span className="text-green-400">Security</span> & Trust in Mind
+            </h2>
+            <p className="text-xl text-gray-300">Your safety and privacy are our top priorities</p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 text-center">
+              <Shield className="w-12 h-12 text-green-400 mx-auto mb-4" />
+              <h3 className="text-lg font-bold text-white mb-2">SSL Encrypted</h3>
+              <p className="text-gray-300 text-sm">Bank-level security for all data transmission</p>
+            </div>
+            
+            <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 text-center">
+              <Code className="w-12 h-12 text-blue-400 mx-auto mb-4" />
+              <h3 className="text-lg font-bold text-white mb-2">Open Source</h3>
+              <p className="text-gray-300 text-sm">Transparent code that anyone can verify</p>
+            </div>
+            
+            <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 text-center">
+              <Lock className="w-12 h-12 text-purple-400 mx-auto mb-4" />
+              <h3 className="text-lg font-bold text-white mb-2">Privacy First</h3>
+              <p className="text-gray-300 text-sm">No personal data collection or tracking</p>
+            </div>
+            
+            <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 text-center">
+              <CheckCircle className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
+              <h3 className="text-lg font-bold text-white mb-2">Verified Fair</h3>
+              <p className="text-gray-300 text-sm">Every game result is cryptographically verifiable</p>
+            </div>
           </div>
         </div>
 

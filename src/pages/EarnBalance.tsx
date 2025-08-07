@@ -606,27 +606,26 @@ const EarnBalance = () => {
             <div className="relative flex items-center justify-center mb-6">
               <div className="relative">
                 <svg
-                  width="200"
-                  height="200"
+                  width="300"
+                  height="300"
                   className={`transition-transform duration-3000 ease-out`}
                   style={{ transform: `rotate(${rotation}deg)` }}
                 >
-                  {/* Wheel segments */}
                   {[1, 2, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50].map((amount, index) => {
                     const angle = (360 / 12) * index;
                     const nextAngle = (360 / 12) * (index + 1);
                     const startAngleRad = (angle * Math.PI) / 180;
                     const endAngleRad = (nextAngle * Math.PI) / 180;
                     
-                    const x1 = 100 + 90 * Math.cos(startAngleRad);
-                    const y1 = 100 + 90 * Math.sin(startAngleRad);
-                    const x2 = 100 + 90 * Math.cos(endAngleRad);
-                    const y2 = 100 + 90 * Math.sin(endAngleRad);
+                    const x1 = 150 + 140 * Math.cos(startAngleRad);
+                    const y1 = 150 + 140 * Math.sin(startAngleRad);
+                    const x2 = 150 + 140 * Math.cos(endAngleRad);
+                    const y2 = 150 + 140 * Math.sin(endAngleRad);
                     
                     const pathData = [
-                      `M 100 100`,
+                      `M 150 150`,
                       `L ${x1} ${y1}`,
-                      `A 90 90 0 0 1 ${x2} ${y2}`,
+                      `A 140 140 0 0 1 ${x2} ${y2}`,
                       'Z'
                     ].join(' ');
                     
@@ -642,12 +641,12 @@ const EarnBalance = () => {
                           strokeWidth="2"
                         />
                         <text
-                          x={100 + 60 * Math.cos((startAngleRad + endAngleRad) / 2)}
-                          y={100 + 60 * Math.sin((startAngleRad + endAngleRad) / 2)}
+                          x={150 + 100 * Math.cos((startAngleRad + endAngleRad) / 2)}
+                          y={150 + 100 * Math.sin((startAngleRad + endAngleRad) / 2)}
                           textAnchor="middle"
                           dominantBaseline="middle"
                           fill="white"
-                          fontSize="12"
+                          fontSize="14"
                           fontWeight="bold"
                         >
                           ${amount}
@@ -659,7 +658,7 @@ const EarnBalance = () => {
                 
                 {/* Pointer */}
                 <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-2">
-                  <div className="w-0 h-0 border-l-4 border-r-4 border-b-8 border-l-transparent border-r-transparent border-b-white"></div>
+                  <div className="w-0 h-0 border-l-6 border-r-6 border-b-12 border-l-transparent border-r-transparent border-b-white shadow-lg"></div>
                 </div>
               </div>
             </div>

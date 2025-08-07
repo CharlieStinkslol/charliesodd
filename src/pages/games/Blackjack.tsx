@@ -1071,17 +1071,6 @@ const Blackjack = () => {
             </div>
           </div>
           
-          {/* Session Profit */}
-          <div className="bg-gray-800 rounded-lg p-6">
-            <h3 className="text-lg font-bold text-white mb-4">Session Profit</h3>
-            <div className="text-center">
-              <div className={`text-4xl font-bold mb-2 ${sessionProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {formatCurrency(sessionProfit)}
-              </div>
-              <div className="text-gray-400">Current Session</div>
-            </div>
-          </div>
-          
           {/* Basic Strategy Tips */}
           <div className="bg-gray-800 rounded-lg p-6">
             <h3 className="text-lg font-bold text-white mb-4">Basic Strategy Tips</h3>

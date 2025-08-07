@@ -119,17 +119,6 @@ const Login = () => {
               </Link>
             </p>
           </div>
-          
-          <div className="mt-4 bg-blue-900 border border-blue-600 rounded-lg p-4">
-            <h3 className="text-blue-200 font-semibold mb-2">Demo Accounts</h3>
-            <p className="text-blue-300 text-sm mb-3">
-              For testing purposes, you can create a new account or use these demo credentials:
-            </p>
-            <div className="text-xs text-blue-200 space-y-1">
-              <div>Email: demo@charliesodds.com</div>
-              <div>Password: demo123</div>
-            </div>
-          </div>
         </div>
 
       </div>
