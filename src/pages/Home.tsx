@@ -12,8 +12,20 @@ import {
 } from 'lucide-react';
 
 const Home = () => {
-  const { bets, stats } = useGame();
+  const { bets } = useGame();
   const { user, formatCurrency } = useAuth();
+  
+  // Use user stats from auth context if available, otherwise fall back to game context
+  const stats = user?.stats || {
+    totalBets: 0,
+    totalWins: 0,
+    totalLosses: 0,
+    totalWagered: 0,
+    totalWon: 0,
+    biggestWin: 0,
+    biggestLoss: 0,
+    winRate: 0
+  };
 
   const games = [
     {

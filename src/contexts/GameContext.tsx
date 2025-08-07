@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, type GameBet as SupabaseGameBet, type GameSetting } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 
 interface GameBet {
@@ -62,10 +62,15 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   const [seed, setSeedState] = useState<string>('');
   const [seedCounter, setSeedCounter] = useState<number>(0);
   const [gameSettings, setGameSettings] = useState<GameSettings>({});
+  const { user } = useAuth();
 
   useEffect(() => {
-    loadUserBets();
+    if (user) {
+      loadUserBets();
+      loadUserGameSettings();
+    }
     
+    // Load or generate seed
     const savedSeed = localStorage.getItem('charlies-odds-seed');
     if (savedSeed) {
       setSeedState(savedSeed);
@@ -74,94 +79,109 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       setSeedState(newSeed);
       localStorage.setItem('charlies-odds-seed', newSeed);
     }
-
-    const savedSettings = localStorage.getItem('charlies-odds-game-settings');
-    if (savedSettings) {
-      setGameSettings(JSON.parse(savedSettings));
-    }
-  }, []);
+  }, [user]);
 
   const loadUserBets = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+    if (!user) return;
+    if (!supabase) return;
 
-      const { data: betsData, error } = await supabase
-        .from('bets')
+    try {
+      const { data, error } = await supabase
+        .from('game_bets')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(1000);
 
-      if (error) throw error;
-
-      if (betsData) {
-        const formattedBets = betsData.map((bet: any) => ({
-          id: bet.id,
-          game: bet.game,
-          betAmount: Number(bet.bet_amount),
-          winAmount: Number(bet.win_amount),
-          multiplier: Number(bet.multiplier),
-          timestamp: new Date(bet.created_at),
-          result: bet.result
-        }));
-        setBets(formattedBets);
+      if (error) {
+        console.error('Error loading bets:', error);
+        return;
       }
+
+      const formattedBets: GameBet[] = data.map(bet => ({
+        id: bet.id,
+        game: bet.game_name,
+        betAmount: bet.bet_amount,
+        winAmount: bet.win_amount,
+        multiplier: bet.multiplier,
+        timestamp: new Date(bet.created_at),
+        result: bet.game_result
+      }));
+
+      setBets(formattedBets);
     } catch (error) {
       console.error('Error loading bets:', error);
     }
   };
 
-  const addBet = async (bet: Omit<GameBet, 'id' | 'timestamp'>) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+  const loadUserGameSettings = async () => {
+    if (!user) return;
+    if (!supabase) return;
 
-      // Save to database
-      const { data: newBet, error } = await supabase
-        .from('bets')
+    try {
+      const { data, error } = await supabase
+        .from('game_settings')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error loading game settings:', error);
+        return;
+      }
+
+      const settings: GameSettings = {};
+      data.forEach(setting => {
+        if (!settings[setting.game_name]) {
+          settings[setting.game_name] = {};
+        }
+        settings[setting.game_name][setting.setting_name] = setting.settings;
+      });
+
+      setGameSettings(settings);
+    } catch (error) {
+      console.error('Error loading game settings:', error);
+    }
+  };
+
+  const addBet = async (bet: Omit<GameBet, 'id' | 'timestamp'>) => {
+    if (!user) return;
+
+    const newBet: GameBet = {
+      ...bet,
+      id: Date.now().toString(),
+      timestamp: new Date(),
+    };
+    
+    // Add to local state immediately for UI responsiveness
+    const updatedBets = [newBet, ...bets].slice(0, 1000);
+    setBets(updatedBets);
+
+    // Save to database if Supabase is available
+    if (!supabase) return;
+
+    try {
+      const { error } = await supabase
+        .from('game_bets')
         .insert({
           user_id: user.id,
-          game: bet.game,
+          game_name: bet.game,
           bet_amount: bet.betAmount,
           win_amount: bet.winAmount,
           multiplier: bet.multiplier,
-          result: bet.result
-        })
-        .select()
-        .single();
+          game_result: bet.result
+        });
 
-      if (error) throw error;
-
-      if (newBet) {
-        const formattedBet: GameBet = {
-          id: newBet.id,
-          game: newBet.game,
-          betAmount: Number(newBet.bet_amount),
-          winAmount: Number(newBet.win_amount),
-          multiplier: Number(newBet.multiplier),
-          timestamp: new Date(newBet.created_at),
-          result: newBet.result
-        };
-        
-        setBets(prev => [formattedBet, ...prev].slice(0, 1000));
+      if (error) {
+        console.error('Error saving bet:', error);
       }
     } catch (error) {
       console.error('Error saving bet:', error);
-      // Fallback to local storage
-      const newBet: GameBet = {
-        ...bet,
-        id: Date.now().toString(),
-        timestamp: new Date(),
-      };
-      
-      const updatedBets = [newBet, ...bets].slice(0, 1000);
-      setBets(updatedBets);
     }
   };
 
   const clearHistory = () => {
     setBets([]);
+    // Note: In production, you might want to soft-delete or archive bets instead
   };
 
   const resetStats = () => {
@@ -175,6 +195,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   };
 
   const generateSeededRandom = (): number => {
+    // Simple seeded random number generator
     const seedStr = seed + seedCounter.toString();
     setSeedCounter(prev => prev + 1);
     
@@ -182,25 +203,27 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     for (let i = 0; i < seedStr.length; i++) {
       const char = seedStr.charCodeAt(i);
       hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
+      hash = hash & hash; // Convert to 32-bit integer
     }
     
     return Math.abs(hash) / 2147483647;
   };
 
   const saveGameSettings = async (gameName: string, settings: any) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        // Fallback to localStorage
-        const updatedSettings = { ...gameSettings, [gameName]: settings };
-        setGameSettings(updatedSettings);
-        localStorage.setItem('charlies-odds-game-settings', JSON.stringify(updatedSettings));
-        return;
-      }
+    if (!user) return;
 
-      // Save to database
-      await supabase
+    // Update local state
+    const updatedSettings = {
+      ...gameSettings,
+      [gameName]: settings
+    };
+    setGameSettings(updatedSettings);
+
+    // Save to database if Supabase is available
+    if (!supabase) return;
+
+    try {
+      const { error } = await supabase
         .from('game_settings')
         .upsert({
           user_id: user.id,
@@ -208,40 +231,17 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
           setting_name: 'default',
           settings: settings
         });
+
+      if (error) {
+        console.error('Error saving game settings:', error);
+      }
     } catch (error) {
       console.error('Error saving game settings:', error);
     }
-    
-    // Also save locally for immediate access
-    const updatedSettings = {
-      ...gameSettings,
-      [gameName]: settings
-    };
-    setGameSettings(updatedSettings);
-    localStorage.setItem('charlies-odds-game-settings', JSON.stringify(updatedSettings));
   };
 
-  const loadGameSettings = async (gameName: string) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: settingsData } = await supabase
-          .from('game_settings')
-          .select('settings')
-          .eq('user_id', user.id)
-          .eq('game_name', gameName)
-          .eq('setting_name', 'default')
-          .single();
-
-        if (settingsData) {
-          return settingsData.settings;
-        }
-      }
-    } catch (error) {
-      console.error('Error loading game settings:', error);
-    }
-    
-    return gameSettings[gameName] || {};
+  const loadGameSettings = (gameName: string) => {
+    return gameSettings[gameName]?.default || {};
   };
 
   const stats: GameStats = {

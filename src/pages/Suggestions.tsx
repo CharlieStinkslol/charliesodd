@@ -1,190 +1,151 @@
 import React, { useState, useEffect } from 'react';
 import { MessageSquare, Send, Lightbulb, Bug, Plus, Star, ThumbsUp, ThumbsDown, User, Calendar } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-
-interface Suggestion {
-  id: number;
-  text: string;
-  category: string;
-  priority: string;
-  author: string;
-  timestamp: string;
-  status: string;
-  upvotes: number;
-  downvotes: number;
-  userVotes: { [userId: string]: 'up' | 'down' };
-  adminResponses?: Array<{
-    id: string;
-    author: string;
-    text: string;
-    timestamp: string;
-  }>;
-}
+import { supabase, type Suggestion } from '../lib/supabase';
 
 const Suggestions = () => {
   const { user } = useAuth();
-  const [suggestion, setSuggestion] = useState('');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [category, setCategory] = useState('feature');
   const [priority, setPriority] = useState('medium');
   const [submitted, setSubmitted] = useState(false);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Load suggestions from localStorage
+  // Load suggestions from Supabase
   useEffect(() => {
-    const savedSuggestions = localStorage.getItem('charlies-odds-suggestions');
-    if (savedSuggestions) {
-      setSuggestions(JSON.parse(savedSuggestions));
-    } else {
-      // Initialize with default suggestions
-      const defaultSuggestions: Suggestion[] = [
-        {
-          id: 1,
-          text: "Add a tournament mode where players can compete",
-          category: "feature",
-          priority: "high",
-          author: "GameMaster",
-          timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-          status: "under-review",
-          upvotes: 23,
-          downvotes: 2,
-          userVotes: {},
-          adminResponses: [{
-            id: "1",
-            author: "Admin",
-            text: "Great idea! We're currently evaluating the technical requirements for implementing tournaments.",
-            timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
-          }]
-        },
-        {
-          id: 2,
-          text: "Include more detailed statistics in the analytics page",
-          category: "improvement",
-          priority: "medium",
-          author: "DataLover",
-          timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          status: "planned",
-          upvotes: 18,
-          downvotes: 1,
-          userVotes: {}
-        },
-        {
-          id: 3,
-          text: "Add sound effects to make games more immersive",
-          category: "feature",
-          priority: "low",
-          author: "SoundFan",
-          timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-          status: "open",
-          upvotes: 12,
-          downvotes: 5,
-          userVotes: {}
-        },
-        {
-          id: 4,
-          text: "Fix the dice animation sometimes getting stuck",
-          category: "bug",
-          priority: "high",
-          author: "BugHunter",
-          timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          status: "in-progress",
-          upvotes: 8,
-          downvotes: 0,
-          userVotes: {},
-          adminResponses: [{
-            id: "2",
-            author: "Admin",
-            text: "We've identified the issue and are working on a fix. Should be resolved in the next update.",
-            timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
-          }]
-        },
-        {
-          id: 5,
-          text: "Add a dark/light theme toggle option",
-          category: "improvement",
-          priority: "low",
-          author: "ThemeSeeker",
-          timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-          status: "open",
-          upvotes: 15,
-          downvotes: 3,
-          userVotes: {}
-        }
-      ];
-      setSuggestions(defaultSuggestions);
-      localStorage.setItem('charlies-odds-suggestions', JSON.stringify(defaultSuggestions));
-    }
+    loadSuggestions();
   }, []);
+
+  const loadSuggestions = async () => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('suggestions')
+        .select(`
+          *,
+          profiles!suggestions_user_id_fkey(username),
+          admin_responses(
+            *,
+            profiles!admin_responses_admin_id_fkey(username)
+          ),
+          suggestion_votes!left(vote_type)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading suggestions:', error);
+        setLoading(false);
+        return;
+      }
+
+      // Process the data to match our interface
+      const processedSuggestions: Suggestion[] = data.map(suggestion => ({
+        ...suggestion,
+        profiles: suggestion.profiles,
+        admin_responses: suggestion.admin_responses,
+        user_vote: user ? suggestion.suggestion_votes?.find((vote: any) => vote.user_id === user.id) : undefined
+      }));
+
+      setSuggestions(processedSuggestions);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error loading suggestions:', error);
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!user) return;
 
-    const newSuggestion: Suggestion = {
-      id: Date.now(),
-      text: suggestion,
-      category,
-      priority,
-      author: user.username,
-      timestamp: new Date().toISOString(),
-      status: 'open',
-      upvotes: 0,
-      downvotes: 0,
-      userVotes: {}
-    };
-
-    const updatedSuggestions = [newSuggestion, ...suggestions];
-    setSuggestions(updatedSuggestions);
-    localStorage.setItem('charlies-odds-suggestions', JSON.stringify(updatedSuggestions));
-    
-    setSubmitted(true);
-    setSuggestion('');
-    
-    setTimeout(() => setSubmitted(false), 3000);
+    createSuggestion();
   };
 
-  const handleVote = (suggestionId: number, voteType: 'up' | 'down') => {
-    if (!user) return;
+  const createSuggestion = async () => {
+    if (!user || !title.trim() || !description.trim()) return;
+    if (!supabase) return;
 
-    const updatedSuggestions = suggestions.map(suggestion => {
-      if (suggestion.id === suggestionId) {
-        const currentVote = suggestion.userVotes[user.id];
-        const newUserVotes = { ...suggestion.userVotes };
-        let newUpvotes = suggestion.upvotes;
-        let newDownvotes = suggestion.downvotes;
+    try {
+      const { error } = await supabase
+        .from('suggestions')
+        .insert({
+          user_id: user.id,
+          title: title.trim(),
+          description: description.trim(),
+          category,
+          priority,
+          status: 'open'
+        });
 
-        // Remove previous vote if exists
-        if (currentVote === 'up') {
-          newUpvotes--;
-        } else if (currentVote === 'down') {
-          newDownvotes--;
-        }
-
-        // Add new vote if different from current
-        if (currentVote !== voteType) {
-          newUserVotes[user.id] = voteType;
-          if (voteType === 'up') {
-            newUpvotes++;
-          } else {
-            newDownvotes++;
-          }
-        } else {
-          // Remove vote if clicking same vote
-          delete newUserVotes[user.id];
-        }
-
-        return {
-          ...suggestion,
-          upvotes: newUpvotes,
-          downvotes: newDownvotes,
-          userVotes: newUserVotes
-        };
+      if (error) {
+        console.error('Error creating suggestion:', error);
+        return;
       }
-      return suggestion;
-    });
 
-    setSuggestions(updatedSuggestions);
-    localStorage.setItem('charlies-odds-suggestions', JSON.stringify(updatedSuggestions));
+      setSubmitted(true);
+      setTitle('');
+      setDescription('');
+      setTimeout(() => setSubmitted(false), 3000);
+      
+      // Reload suggestions
+      loadSuggestions();
+    } catch (error) {
+      console.error('Error creating suggestion:', error);
+    }
+  };
+
+  const handleVote = async (suggestionId: string, voteType: 'up' | 'down') => {
+    if (!user) return;
+    if (!supabase) return;
+
+    try {
+      // Check if user already voted
+      const { data: existingVote } = await supabase
+        .from('suggestion_votes')
+        .select('vote_type')
+        .eq('user_id', user.id)
+        .eq('suggestion_id', suggestionId)
+        .single();
+
+      if (existingVote) {
+        if (existingVote.vote_type === voteType) {
+          // Remove vote if clicking same vote
+          await supabase
+            .from('suggestion_votes')
+            .delete()
+            .eq('user_id', user.id)
+            .eq('suggestion_id', suggestionId);
+        } else {
+          // Update vote if different
+          await supabase
+            .from('suggestion_votes')
+            .update({ vote_type: voteType })
+            .eq('user_id', user.id)
+            .eq('suggestion_id', suggestionId);
+        }
+      } else {
+        // Create new vote
+        await supabase
+          .from('suggestion_votes')
+          .insert({
+            user_id: user.id,
+            suggestion_id: suggestionId,
+            vote_type: voteType
+          });
+      }
+
+      // Reload suggestions to get updated counts
+      loadSuggestions();
+    } catch (error) {
+      console.error('Error voting:', error);
+    }
   };
 
   // Sort suggestions by score (upvotes - downvotes)
@@ -295,11 +256,26 @@ const Suggestions = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Your Suggestion
+                  Title
+                </label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  placeholder="Brief title for your suggestion..."
+                  required
+                  disabled={!user}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Description
                 </label>
                 <textarea
-                  value={suggestion}
-                  onChange={(e) => setSuggestion(e.target.value)}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
                   className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-400 h-32 resize-none"
                   placeholder="Describe your suggestion or issue in detail..."
                   required
@@ -347,7 +323,12 @@ const Suggestions = () => {
           </div>
 
           <div className="space-y-4">
-            {sortedSuggestions.map((item) => (
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="w-8 h-8 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                <p className="text-gray-400">Loading suggestions...</p>
+              </div>
+            ) : sortedSuggestions.map((item) => (
               <div key={item.id} className="bg-gray-800 rounded-lg p-6 border border-gray-700">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center space-x-3">
@@ -364,27 +345,30 @@ const Suggestions = () => {
                 
                 <div className="flex items-center space-x-2 mb-3 text-sm text-gray-400">
                   <User className="w-4 h-4" />
-                  <span>{item.author}</span>
+                  <span>{item.profiles?.username || 'Unknown'}</span>
                   <Calendar className="w-4 h-4 ml-2" />
-                  <span>{new Date(item.timestamp).toLocaleDateString()}</span>
+                  <span>{new Date(item.created_at).toLocaleDateString()}</span>
                 </div>
                 
-                <p className="text-white mb-4">{item.text}</p>
+                <h3 className="text-lg font-bold text-white mb-2">{item.title}</h3>
+                <p className="text-gray-300 mb-4">{item.description}</p>
                 
                 {/* Admin Responses */}
-                {item.adminResponses && item.adminResponses.length > 0 && (
+                {item.admin_responses && item.admin_responses.length > 0 && (
                   <div className="bg-gray-700 rounded-lg p-4 mb-4">
                     <h4 className="text-yellow-400 font-semibold mb-3 text-sm">Official Response:</h4>
                     <div className="space-y-2">
-                      {item.adminResponses.map((response) => (
+                      {item.admin_responses.map((response) => (
                         <div key={response.id} className="bg-gray-600 rounded p-3">
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-yellow-400 font-semibold text-sm">{response.author}</span>
+                            <span className="text-yellow-400 font-semibold text-sm">
+                              {response.profiles?.username || 'Admin'}
+                            </span>
                             <span className="text-gray-400 text-xs">
-                              {new Date(response.timestamp).toLocaleDateString()}
+                              {new Date(response.created_at).toLocaleDateString()}
                             </span>
                           </div>
-                          <p className="text-gray-200 text-sm">{response.text}</p>
+                          <p className="text-gray-200 text-sm">{response.response_text}</p>
                         </div>
                       ))}
                     </div>
@@ -397,7 +381,7 @@ const Suggestions = () => {
                       onClick={() => handleVote(item.id, 'up')}
                       disabled={!user}
                       className={`flex items-center space-x-1 transition-colors ${
-                        user && item.userVotes[user.id] === 'up' 
+                        user && item.user_vote?.vote_type === 'up' 
                           ? 'text-green-400' 
                           : 'text-gray-400 hover:text-green-400'
                       } ${!user ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
@@ -409,7 +393,7 @@ const Suggestions = () => {
                       onClick={() => handleVote(item.id, 'down')}
                       disabled={!user}
                       className={`flex items-center space-x-1 transition-colors ${
-                        user && item.userVotes[user.id] === 'down' 
+                        user && item.user_vote?.vote_type === 'down' 
                           ? 'text-red-400' 
                           : 'text-gray-400 hover:text-red-400'
                       } ${!user ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
@@ -422,7 +406,7 @@ const Suggestions = () => {
                     </div>
                   </div>
                   <div className="text-xs text-gray-400">
-                    Suggestion #{item.id}
+                    {new Date(item.created_at).toLocaleDateString()}
                   </div>
                 </div>
               </div>

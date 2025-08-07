@@ -8,6 +8,18 @@ import RecentBets from '../components/RecentBets';
 const Analytics = () => {
   const { user, formatCurrency } = useAuth();
   const { bets, stats } = useGame();
+  
+  // Use user stats from auth context if available, otherwise fall back to game context
+  const displayStats = user?.stats ? {
+    totalBets: user.stats.totalBets,
+    totalWins: user.stats.totalWins,
+    totalLosses: user.stats.totalLosses,
+    totalWagered: user.stats.totalWagered,
+    totalWon: user.stats.totalWon,
+    biggestWin: user.stats.biggestWin,
+    biggestLoss: user.stats.biggestLoss,
+    winRate: user.stats.totalBets > 0 ? (user.stats.totalWins / user.stats.totalBets) * 100 : 0
+  } : stats;
 
   if (!user) {
     return (
@@ -27,11 +39,11 @@ const Analytics = () => {
     );
   }
 
-  const profitLoss = stats.totalWon - stats.totalWagered;
+  const profitLoss = displayStats.totalWon - displayStats.totalWagered;
   
   // Calculate additional stats
-  const averageBet = stats.totalBets > 0 ? stats.totalWagered / stats.totalBets : 0;
-  const averageWin = stats.totalWins > 0 ? stats.totalWon / stats.totalWins : 0;
+  const averageBet = displayStats.totalBets > 0 ? displayStats.totalWagered / displayStats.totalBets : 0;
+  const averageWin = displayStats.totalWins > 0 ? displayStats.totalWon / displayStats.totalWins : 0;
   
   // Game distribution
   const gameDistribution = bets.reduce((acc, bet) => {
@@ -57,7 +69,7 @@ const Analytics = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-400 text-sm">Total Bets</p>
-              <p className="text-2xl font-bold text-white">{stats.totalBets}</p>
+              <p className="text-2xl font-bold text-white">{displayStats.totalBets}</p>
             </div>
             <Target className="w-8 h-8 text-blue-400" />
           </div>
@@ -67,7 +79,7 @@ const Analytics = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-400 text-sm">Win Rate</p>
-              <p className="text-2xl font-bold text-white">{stats.winRate.toFixed(1)}%</p>
+              <p className="text-2xl font-bold text-white">{displayStats.winRate.toFixed(1)}%</p>
             </div>
             <TrendingUp className="w-8 h-8 text-green-400" />
           </div>
@@ -77,7 +89,7 @@ const Analytics = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-400 text-sm">Total Wagered</p>
-              <p className="text-2xl font-bold text-white">{formatCurrency(stats.totalWagered)}</p>
+              <p className="text-2xl font-bold text-white">{formatCurrency(displayStats.totalWagered)}</p>
             </div>
             <DollarSign className="w-8 h-8 text-yellow-400" />
           </div>
@@ -116,7 +128,7 @@ const Analytics = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-400 text-sm">Biggest Win</p>
-              <p className="text-2xl font-bold text-white">{formatCurrency(stats.biggestWin)}</p>
+              <p className="text-2xl font-bold text-white">{formatCurrency(displayStats.biggestWin)}</p>
             </div>
             <Trophy className="w-8 h-8 text-yellow-400" />
           </div>
@@ -153,29 +165,29 @@ const Analytics = () => {
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <span className="text-gray-400">Biggest Win</span>
-              <span className="text-green-400 font-semibold">{formatCurrency(stats.biggestWin)}</span>
+              <span className="text-green-400 font-semibold">{formatCurrency(displayStats.biggestWin)}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-400">Biggest Loss</span>
-              <span className="text-red-400 font-semibold">{formatCurrency(Math.abs(stats.biggestLoss))}</span>
+              <span className="text-red-400 font-semibold">{formatCurrency(Math.abs(displayStats.biggestLoss))}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-400">Total Wins</span>
-              <span className="text-white font-semibold">{stats.totalWins}</span>
+              <span className="text-white font-semibold">{displayStats.totalWins}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-400">Total Losses</span>
-              <span className="text-white font-semibold">{stats.totalLosses}</span>
+              <span className="text-white font-semibold">{displayStats.totalLosses}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-400">Average Bet</span>
               <span className="text-white font-semibold">
-                {formatCurrency(stats.totalBets > 0 ? (stats.totalWagered / stats.totalBets) : 0)}
+                {formatCurrency(displayStats.totalBets > 0 ? (displayStats.totalWagered / displayStats.totalBets) : 0)}
               </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-400">Total Won</span>
-              <span className="text-white font-semibold">{formatCurrency(stats.totalWon)}</span>
+              <span className="text-white font-semibold">{formatCurrency(displayStats.totalWon)}</span>
             </div>
           </div>
         </div>
@@ -197,11 +209,11 @@ const Analytics = () => {
                   <div className="w-full bg-gray-700 rounded-full h-2">
                     <div 
                       className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full"
-                      style={{ width: `${(count / stats.totalBets) * 100}%` }}
+                      style={{ width: `${(count / displayStats.totalBets) * 100}%` }}
                     />
                   </div>
                   <div className="text-xs text-gray-400 mt-1">
-                    {((count / stats.totalBets) * 100).toFixed(1)}% of total bets
+                    {((count / displayStats.totalBets) * 100).toFixed(1)}% of total bets
                   </div>
                 </div>
               ))}
@@ -213,7 +225,7 @@ const Analytics = () => {
       <div className="bg-gradient-to-r from-gray-800 to-gray-700 rounded-lg p-6">
         <h2 className="text-xl font-bold text-white mb-4">Performance Summary</h2>
         <p className="text-gray-300">
-          You've placed {stats.totalBets} bets with a {stats.winRate.toFixed(1)}% win rate. 
+          You've placed {displayStats.totalBets} bets with a {displayStats.winRate.toFixed(1)}% win rate. 
           Your current profit/loss is {formatCurrency(profitLoss)} with an average bet of {formatCurrency(averageBet)}.
           {favoriteGame !== 'None' && ` Your favorite game is ${favoriteGame}.`}
         </p>

@@ -20,7 +20,19 @@ const Profile = () => {
     getNextLevelRequirement, 
     getLevelRewards 
   } = useAuth();
-  const { stats, bets } = useGame();
+  const { bets } = useGame();
+  
+  // Use user stats from auth context if available
+  const stats = user?.stats || {
+    totalBets: 0,
+    totalWins: 0,
+    totalLosses: 0,
+    totalWagered: 0,
+    totalWon: 0,
+    biggestWin: 0,
+    biggestLoss: 0,
+    winRate: 0
+  };
   const [isEditing, setIsEditing] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [editForm, setEditForm] = useState({

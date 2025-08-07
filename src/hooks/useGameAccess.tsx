@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
 
 interface GameSettings {
   enabled: boolean;
@@ -13,23 +12,13 @@ export const useGameAccess = (gameName: string) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const loadGameSettings = async () => {
-      try {
-        const { data: configData, error } = await supabase
-          .from('admin_game_config')
-          .select('*')
-          .eq('game_name', gameName)
-          .single();
-
-        if (error) throw error;
-
-        if (configData) {
-          setGameSettings({
-            enabled: configData.enabled,
-            minBet: Number(configData.min_bet),
-            maxBet: Number(configData.max_bet),
-            houseEdge: Number(configData.house_edge)
-          });
+    const loadGameSettings = () => {
+      const savedSettings = localStorage.getItem('charlies-odds-admin-game-settings');
+      if (savedSettings) {
+        const allSettings = JSON.parse(savedSettings);
+        const settings = allSettings[gameName];
+        if (settings) {
+          setGameSettings(settings);
         } else {
           // Default settings if not found
           setGameSettings({
@@ -39,9 +28,8 @@ export const useGameAccess = (gameName: string) => {
             houseEdge: 1
           });
         }
-      } catch (error) {
-        console.error('Error loading game settings:', error);
-        // Fallback to default settings
+      } else {
+        // Default settings if no admin settings exist
         setGameSettings({
           enabled: true,
           minBet: 0.01,
@@ -58,6 +46,7 @@ export const useGameAccess = (gameName: string) => {
   const validateBetAmount = (amount: number): { isValid: boolean; message?: string } => {
     if (!gameSettings) return { isValid: true };
 
+    // Check minimum bet
     if (gameSettings.minBet && amount < gameSettings.minBet) {
       return {
         isValid: false,
@@ -65,6 +54,7 @@ export const useGameAccess = (gameName: string) => {
       };
     }
 
+    // Check maximum bet
     if (gameSettings.maxBet && amount > gameSettings.maxBet) {
       return {
         isValid: false,
