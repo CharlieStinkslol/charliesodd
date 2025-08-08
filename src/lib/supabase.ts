@@ -143,7 +143,7 @@ export const supabaseHelpers = {
   // Profile functions
   async getProfile(userId: string): Promise<Profile | null> {
     const { data, error } = await supabase
-      .from('profiles')
+      .from('users')
       .select('*')
       .eq('id', userId)
       .single();
@@ -189,8 +189,8 @@ export const supabaseHelpers = {
   async registerUser(username: string, password: string): Promise<{ success: boolean; message: string; user?: Profile }> {
     const { data, error } = await supabase
       .rpc('register_user', {
-        username_input: username,
-        password_input: password
+        password_input: password,
+        username_input: username
       });
     
     if (error || !data || data.length === 0) {
@@ -215,7 +215,7 @@ export const supabaseHelpers = {
   },
   async updateProfile(userId: string, updates: Partial<Profile>): Promise<boolean> {
     const { error } = await supabase
-      .from('profiles')
+       .from('users')
       .update(updates)
       .eq('id', userId);
     
@@ -229,7 +229,7 @@ export const supabaseHelpers = {
 
   async createProfile(profile: Omit<Profile, 'created_at' | 'updated_at'>): Promise<boolean> {
     const { error } = await supabase
-      .from('profiles')
+       .from('users')
       .insert([profile]);
     
     if (error) {
@@ -326,12 +326,12 @@ export const supabaseHelpers = {
       .from('suggestions')
       .select(`
         *,
-        profiles:user_id (username),
+        users:user_id (username),
         admin_responses (
           id,
           response_text,
           created_at,
-          profiles:admin_id (username)
+          users:admin_id (username)
         )
       `)
       .order('created_at', { ascending: false });
