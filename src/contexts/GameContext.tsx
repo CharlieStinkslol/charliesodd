@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase, type GameBet as SupabaseGameBet, type GameSetting } from '../lib/supabase';
+import { localStorage_helpers, type GameBet as LocalGameBet, type GameSetting } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 
 interface GameBet {
@@ -81,69 +81,35 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   }, [user]);
 
-  const loadUserBets = async () => {
+  const loadUserBets = () => {
     if (!user) return;
-    if (!supabase) return;
 
-    try {
-      const { data, error } = await supabase
-        .from('game_bets')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1000);
+    const allBets = localStorage_helpers.getBets();
+    const userBets = allBets.filter(bet => bet.user_id === user.id);
+    
+    const formattedBets: GameBet[] = userBets.map(bet => ({
+      id: bet.id,
+      game: bet.game_name,
+      betAmount: bet.bet_amount,
+      winAmount: bet.win_amount,
+      multiplier: bet.multiplier,
+      timestamp: new Date(bet.created_at),
+      result: bet.game_result
+    }));
 
-      if (error) {
-        console.error('Error loading bets:', error);
-        return;
-      }
+    setBets(formattedBets.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()));
+  };
 
-      const formattedBets: GameBet[] = (data || []).map(bet => ({
-        id: bet.id,
-        game: bet.game_name,
-        betAmount: bet.bet_amount,
-        winAmount: bet.win_amount,
-        multiplier: bet.multiplier,
-        timestamp: new Date(bet.created_at),
-        result: bet.game_result
-      }));
+  const loadUserGameSettings = () => {
+    if (!user) return;
 
-      setBets(formattedBets);
-    } catch (error) {
-      console.error('Error loading bets:', error);
+    const savedSettings = localStorage.getItem(`charlies-odds-game-settings-${user.id}`);
+    if (savedSettings) {
+      setGameSettings(JSON.parse(savedSettings));
     }
   };
 
-  const loadUserGameSettings = async () => {
-    if (!user) return;
-    if (!supabase) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('game_settings')
-        .select('*')
-        .eq('user_id', user.id);
-
-      if (error) {
-        console.error('Error loading game settings:', error);
-        return;
-      }
-
-      const settings: GameSettings = {};
-      (data || []).forEach(setting => {
-        if (!settings[setting.game_name]) {
-          settings[setting.game_name] = {};
-        }
-        settings[setting.game_name][setting.setting_name] = setting.settings;
-      });
-
-      setGameSettings(settings);
-    } catch (error) {
-      console.error('Error loading game settings:', error);
-    }
-  };
-
-  const addBet = async (bet: Omit<GameBet, 'id' | 'timestamp'>) => {
+  const addBet = (bet: Omit<GameBet, 'id' | 'timestamp'>) => {
     if (!user) return;
 
     const newBet: GameBet = {
@@ -152,36 +118,34 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       timestamp: new Date(),
     };
     
-    // Add to local state immediately for UI responsiveness
+    // Add to local state
     const updatedBets = [newBet, ...bets].slice(0, 1000);
     setBets(updatedBets);
 
-    // Save to database if Supabase is available
-    if (!supabase) return;
-
-    try {
-      const { error } = await supabase
-        .from('game_bets')
-        .insert({
-          user_id: user.id,
-          game_name: bet.game,
-          bet_amount: bet.betAmount,
-          win_amount: bet.winAmount,
-          multiplier: bet.multiplier,
-          game_result: bet.result
-        });
-
-      if (error) {
-        console.error('Error saving bet:', error);
-      }
-    } catch (error) {
-      console.error('Error saving bet:', error);
-    }
+    // Save to localStorage
+    const allBets = localStorage_helpers.getBets();
+    const localBet: LocalGameBet = {
+      id: newBet.id,
+      user_id: user.id,
+      game_name: bet.game as any,
+      bet_amount: bet.betAmount,
+      win_amount: bet.winAmount,
+      multiplier: bet.multiplier,
+      game_result: bet.result,
+      created_at: newBet.timestamp.toISOString()
+    };
+    
+    allBets.push(localBet);
+    localStorage_helpers.saveBets(allBets);
   };
 
   const clearHistory = () => {
     setBets([]);
-    // Note: In production, you might want to soft-delete or archive bets instead
+    if (user) {
+      const allBets = localStorage_helpers.getBets();
+      const filteredBets = allBets.filter(bet => bet.user_id !== user.id);
+      localStorage_helpers.saveBets(filteredBets);
+    }
   };
 
   const resetStats = () => {
@@ -209,39 +173,19 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     return Math.abs(hash) / 2147483647;
   };
 
-  const saveGameSettings = async (gameName: string, settings: any) => {
+  const saveGameSettings = (gameName: string, settings: any) => {
     if (!user) return;
 
-    // Update local state
     const updatedSettings = {
       ...gameSettings,
       [gameName]: settings
     };
     setGameSettings(updatedSettings);
-
-    // Save to database if Supabase is available
-    if (!supabase) return;
-
-    try {
-      const { error } = await supabase
-        .from('game_settings')
-        .upsert({
-          user_id: user.id,
-          game_name: gameName,
-          setting_name: 'default',
-          settings: settings
-        });
-
-      if (error) {
-        console.error('Error saving game settings:', error);
-      }
-    } catch (error) {
-      console.error('Error saving game settings:', error);
-    }
+    localStorage.setItem(`charlies-odds-game-settings-${user.id}`, JSON.stringify(updatedSettings));
   };
 
   const loadGameSettings = (gameName: string) => {
-    return gameSettings[gameName]?.default || {};
+    return gameSettings[gameName] || {};
   };
 
   const stats: GameStats = {

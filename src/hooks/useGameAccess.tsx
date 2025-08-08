@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { localStorage_helpers } from '../lib/supabase';
 
 interface GameSettings {
   enabled: boolean;
@@ -13,63 +13,16 @@ export const useGameAccess = (gameName: string) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const loadGameSettings = async () => {
-      if (!supabase) {
-        // Fallback to localStorage if Supabase not available
-        const savedSettings = localStorage.getItem('charlies-odds-admin-game-settings');
-        if (savedSettings) {
-          const allSettings = JSON.parse(savedSettings);
-          const settings = allSettings[gameName];
-          setGameSettings(settings || {
-            enabled: true,
-            minBet: 0.01,
-            maxBet: 1000,
-            houseEdge: 1
-          });
-        } else {
-          setGameSettings({
-            enabled: true,
-            minBet: 0.01,
-            maxBet: 1000,
-            houseEdge: 1
-          });
-        }
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('admin_game_config')
-          .select('*')
-          .eq('game_name', gameName)
-          .single();
-
-        if (error || !data) {
-          // Use default settings if not found
-          setGameSettings({
-            enabled: true,
-            minBet: 0.01,
-            maxBet: 1000,
-            houseEdge: 1
-          });
-        } else {
-          setGameSettings({
-            enabled: data.enabled,
-            minBet: data.min_bet,
-            maxBet: data.max_bet,
-            houseEdge: data.house_edge
-          });
-        }
-      } catch (error) {
-        console.error('Error loading game settings:', error);
-        setGameSettings({
-          enabled: true,
-          minBet: 0.01,
-          maxBet: 1000,
-          houseEdge: 1
-        });
-      }
+    const loadGameSettings = () => {
+      const allConfig = localStorage_helpers.getGameConfig();
+      const config = allConfig.find(c => c.game_name === gameName);
+      
+      setGameSettings({
+        enabled: config?.enabled ?? true,
+        minBet: config?.min_bet ?? 0.01,
+        maxBet: config?.max_bet ?? 1000,
+        houseEdge: config?.house_edge ?? 1
+      });
       
       setIsLoading(false);
     };

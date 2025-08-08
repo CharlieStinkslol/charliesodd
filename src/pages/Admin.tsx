@@ -6,7 +6,7 @@ import {
   FileText, Tag, Link as LinkIcon, Palette, Code
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
+import { localStorage_helpers } from '../lib/supabase';
 
 interface SEOSettings {
   [pagePath: string]: {
@@ -109,38 +109,23 @@ const Admin = () => {
     loadSEOSettings();
   }, [user, navigate]);
 
-  const loadAdminData = async () => {
-    if (!supabase) return;
-    
-    try {
-      // Load users
-      const { data: usersData } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (usersData) setUsers(usersData);
+  const loadAdminData = () => {
+    // Load users from localStorage
+    const usersData = localStorage_helpers.getUsers();
+    setUsers(usersData);
 
-      // Load game settings from database
-      const { data: gameConfigData } = await supabase
-        .from('admin_game_config')
-        .select('*');
-
-      if (gameConfigData) {
-        const settings: any = {};
-        gameConfigData.forEach(config => {
-          settings[config.game_name] = {
-            enabled: config.enabled,
-            minBet: config.min_bet,
-            maxBet: config.max_bet,
-            houseEdge: config.house_edge
-          };
-        });
-        setGameSettings(settings);
-      }
-    } catch (error) {
-      console.error('Error loading admin data:', error);
-    }
+    // Load game settings from localStorage
+    const gameConfigData = localStorage_helpers.getGameConfig();
+    const settings: any = {};
+    gameConfigData.forEach(config => {
+      settings[config.game_name] = {
+        enabled: config.enabled,
+        minBet: config.min_bet,
+        maxBet: config.max_bet,
+        houseEdge: config.house_edge
+      };
+    });
+    setGameSettings(settings);
   };
 
   const loadSEOSettings = () => {
@@ -153,51 +138,45 @@ const Admin = () => {
     }
   };
 
-  const updateGameSetting = async (game: string, setting: string, value: any) => {
-    if (!supabase || !user) return;
+  const updateGameSetting = (game: string, setting: string, value: any) => {
+    if (!user) return;
 
-    try {
-      const updateData: any = { updated_by: user.id };
-      
-      switch (setting) {
-        case 'enabled':
-          updateData.enabled = value;
-          break;
-        case 'minBet':
-          updateData.min_bet = value;
-          break;
-        case 'maxBet':
-          updateData.max_bet = value;
-          break;
-        case 'houseEdge':
-          updateData.house_edge = value;
-          break;
-      }
-
-      const { error } = await supabase
-        .from('admin_game_config')
-        .upsert({
-          game_name: game,
-          ...updateData
-        });
-
-      if (error) {
-        console.error('Error updating game setting:', error);
-        return;
-      }
-
-      // Update local state
-      const updatedSettings = {
-        ...gameSettings,
-        [game]: {
-          ...gameSettings[game],
-          [setting]: value
+    const allConfig = localStorage_helpers.getGameConfig();
+    const updatedConfig = allConfig.map(config => {
+      if (config.game_name === game) {
+        const updateData: any = { ...config, updated_by: user.id, updated_at: new Date().toISOString() };
+        
+        switch (setting) {
+          case 'enabled':
+            updateData.enabled = value;
+            break;
+          case 'minBet':
+            updateData.min_bet = value;
+            break;
+          case 'maxBet':
+            updateData.max_bet = value;
+            break;
+          case 'houseEdge':
+            updateData.house_edge = value;
+            break;
         }
-      };
-      setGameSettings(updatedSettings);
-    } catch (error) {
-      console.error('Error updating game setting:', error);
-    }
+        
+        return updateData;
+      }
+      return config;
+    });
+
+    localStorage_helpers.saveGameConfig(updatedConfig);
+
+    // Update local state
+    const updatedSettings = {
+      ...gameSettings,
+      [game]: {
+        ...gameSettings[game],
+        [setting]: value
+      }
+    };
+    setGameSettings(updatedSettings);
   };
 
   const updateSEOSetting = (page: string, field: string, value: string) => {
@@ -372,7 +351,10 @@ const Admin = () => {
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <h2 className="text-2xl font-bold text-white">User Management</h2>
-                  <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center">
+                  <button 
+                    onClick={loadAdminData}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center"
+                  >
                     <RefreshCw className="w-4 h-4 mr-2" />
                     Refresh
                   </button>

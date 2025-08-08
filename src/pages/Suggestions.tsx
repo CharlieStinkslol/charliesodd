@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MessageSquare, Send, Lightbulb, Bug, Plus, Star, ThumbsUp, ThumbsDown, User, Calendar } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase, type Suggestion } from '../lib/supabase';
+import { localStorage_helpers, type Suggestion } from '../lib/supabase';
 
 const Suggestions = () => {
   const { user } = useAuth();
@@ -13,50 +13,31 @@ const Suggestions = () => {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load suggestions from Supabase
+  // Load suggestions from localStorage
   useEffect(() => {
     loadSuggestions();
   }, []);
 
-  const loadSuggestions = async () => {
-    if (!supabase) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('suggestions')
-        .select(`
-          *,
-          profiles:user_id(username),
-          admin_responses(*),
-          suggestion_votes(vote_type, user_id)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error loading suggestions:', error);
-        setLoading(false);
-        return;
-      }
-
-      // Process the data to match our interface
-      const processedSuggestions: Suggestion[] = (data || []).map(suggestion => ({
+  const loadSuggestions = () => {
+    const allSuggestions = localStorage_helpers.getSuggestions();
+    const users = localStorage_helpers.getUsers();
+    
+    // Process suggestions to include user data and votes
+    const processedSuggestions: Suggestion[] = allSuggestions.map(suggestion => {
+      const suggestionUser = users.find(u => u.id === suggestion.user_id);
+      const votes = JSON.parse(localStorage.getItem('charlies-odds-suggestion-votes') || '[]');
+      const userVote = user ? votes.find((vote: any) => vote.user_id === user.id && vote.suggestion_id === suggestion.id) : undefined;
+      
+      return {
         ...suggestion,
-        profiles: suggestion.profiles,
-        admin_responses: suggestion.admin_responses,
-        user_vote: user && suggestion.suggestion_votes ? 
-          suggestion.suggestion_votes.find((vote: any) => vote.user_id === user.id) : 
-          undefined
-      }));
+        profiles: suggestionUser ? { username: suggestionUser.username } : undefined,
+        admin_responses: JSON.parse(localStorage.getItem(`charlies-odds-admin-responses-${suggestion.id}`) || '[]'),
+        user_vote: userVote
+      };
+    });
 
-      setSuggestions(processedSuggestions);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error loading suggestions:', error);
-      setLoading(false);
-    }
+    setSuggestions(processedSuggestions.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+    setLoading(false);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -67,84 +48,84 @@ const Suggestions = () => {
     createSuggestion();
   };
 
-  const createSuggestion = async () => {
+  const createSuggestion = () => {
     if (!user || !title.trim() || !description.trim()) return;
-    if (!supabase) return;
 
-    try {
-      const { error } = await supabase
-        .from('suggestions')
-        .insert({
-          user_id: user.id,
-          title: title.trim(),
-          description: description.trim(),
-          category,
-          priority,
-          status: 'open'
-        });
+    const newSuggestion: Suggestion = {
+      id: Date.now().toString(),
+      user_id: user.id,
+      title: title.trim(),
+      description: description.trim(),
+      category: category as any,
+      priority: priority as any,
+      status: 'open',
+      upvotes: 0,
+      downvotes: 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
 
-      if (error) {
-        console.error('Error creating suggestion:', error);
-        return;
-      }
+    const allSuggestions = localStorage_helpers.getSuggestions();
+    allSuggestions.push(newSuggestion);
+    localStorage_helpers.saveSuggestions(allSuggestions);
 
-      setSubmitted(true);
-      setTitle('');
-      setDescription('');
-      setTimeout(() => setSubmitted(false), 3000);
-      
-      // Reload suggestions
-      loadSuggestions();
-    } catch (error) {
-      console.error('Error creating suggestion:', error);
-    }
+    setSubmitted(true);
+    setTitle('');
+    setDescription('');
+    setTimeout(() => setSubmitted(false), 3000);
+    
+    // Reload suggestions
+    loadSuggestions();
   };
 
-  const handleVote = async (suggestionId: string, voteType: 'up' | 'down') => {
+  const handleVote = (suggestionId: string, voteType: 'up' | 'down') => {
     if (!user) return;
-    if (!supabase) return;
 
-    try {
-      // Check if user already voted
-      const { data: existingVote } = await supabase
-        .from('suggestion_votes')
-        .select('vote_type')
-        .eq('user_id', user.id)
-        .eq('suggestion_id', suggestionId)
-        .single();
-
-      if (existingVote) {
-        if (existingVote.vote_type === voteType) {
-          // Remove vote if clicking same vote
-          await supabase
-            .from('suggestion_votes')
-            .delete()
-            .eq('user_id', user.id)
-            .eq('suggestion_id', suggestionId);
-        } else {
-          // Update vote if different
-          await supabase
-            .from('suggestion_votes')
-            .update({ vote_type: voteType })
-            .eq('user_id', user.id)
-            .eq('suggestion_id', suggestionId);
-        }
+    const votes = JSON.parse(localStorage.getItem('charlies-odds-suggestion-votes') || '[]');
+    const existingVoteIndex = votes.findIndex((vote: any) => vote.user_id === user.id && vote.suggestion_id === suggestionId);
+    
+    if (existingVoteIndex >= 0) {
+      const existingVote = votes[existingVoteIndex];
+      if (existingVote.vote_type === voteType) {
+        // Remove vote if clicking same vote
+        votes.splice(existingVoteIndex, 1);
       } else {
-        // Create new vote
-        await supabase
-          .from('suggestion_votes')
-          .insert({
-            user_id: user.id,
-            suggestion_id: suggestionId,
-            vote_type: voteType
-          });
+        // Update vote if different
+        votes[existingVoteIndex].vote_type = voteType;
       }
-
-      // Reload suggestions to get updated counts
-      loadSuggestions();
-    } catch (error) {
-      console.error('Error voting:', error);
+    } else {
+      // Create new vote
+      votes.push({
+        id: Date.now().toString(),
+        user_id: user.id,
+        suggestion_id: suggestionId,
+        vote_type: voteType,
+        created_at: new Date().toISOString()
+      });
     }
+
+    localStorage.setItem('charlies-odds-suggestion-votes', JSON.stringify(votes));
+
+    // Update suggestion vote counts
+    const allSuggestions = localStorage_helpers.getSuggestions();
+    const updatedSuggestions = allSuggestions.map(suggestion => {
+      if (suggestion.id === suggestionId) {
+        const suggestionVotes = votes.filter((vote: any) => vote.suggestion_id === suggestionId);
+        const upvotes = suggestionVotes.filter((vote: any) => vote.vote_type === 'up').length;
+        const downvotes = suggestionVotes.filter((vote: any) => vote.vote_type === 'down').length;
+        
+        return {
+          ...suggestion,
+          upvotes,
+          downvotes,
+          updated_at: new Date().toISOString()
+        };
+      }
+      return suggestion;
+    });
+    
+    localStorage_helpers.saveSuggestions(updatedSuggestions);
+    loadSuggestions();
   };
 
   // Sort suggestions by score (upvotes - downvotes)
@@ -412,7 +393,7 @@ const Suggestions = () => {
             ))}
           </div>
 
-          {suggestions.length === 0 && (
+          {suggestions.length === 0 && !loading && (
             <div className="text-center py-12">
               <MessageSquare className="w-16 h-16 text-gray-600 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-gray-400 mb-2">No Suggestions Yet</h3>

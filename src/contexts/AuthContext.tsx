@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase, type Profile, type UserStats } from '../lib/supabase';
-import type { User as SupabaseUser } from '@supabase/supabase-js';
+import { localStorage_helpers, type Profile, type UserStats } from '../lib/supabase';
 
 interface User {
   id: string;
@@ -60,188 +59,163 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Initialize Supabase auth state
+  // Initialize from localStorage
   useEffect(() => {
-    if (!supabase) {
-      setLoading(false);
-      return;
+    const currentUserId = localStorage.getItem('charlies-odds-current-user');
+    if (currentUserId) {
+      const users = localStorage_helpers.getUsers();
+      const foundUser = users.find(u => u.id === currentUserId);
+      if (foundUser) {
+        const userStats = localStorage_helpers.getUserStats();
+        const stats = userStats.find(s => s.user_id === foundUser.id);
+        
+        const userObj: User = {
+          id: foundUser.id,
+          username: foundUser.username,
+          email: foundUser.email,
+          balance: foundUser.balance,
+          isAdmin: foundUser.is_admin,
+          level: foundUser.level,
+          experience: foundUser.experience,
+          lastDailyBonus: foundUser.last_daily_bonus,
+          currency: foundUser.currency,
+          createdAt: foundUser.created_at,
+          stats: {
+            totalBets: stats?.total_bets || 0,
+            totalWins: stats?.total_wins || 0,
+            totalLosses: stats?.total_losses || 0,
+            biggestWin: stats?.biggest_win || 0,
+            biggestLoss: stats?.biggest_loss || 0,
+            totalWagered: stats?.total_wagered || 0,
+            totalWon: stats?.total_won || 0
+          }
+        };
+
+        setUser(userObj);
+        setIsAuthenticated(true);
+      }
     }
-
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        loadUserProfile(session.user);
-      } else {
-        setLoading(false);
-      }
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        await loadUserProfile(session.user);
-      } else {
-        setUser(null);
-        setIsAuthenticated(false);
-        setLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    setLoading(false);
   }, []);
 
-  const loadUserProfile = async (authUser: SupabaseUser) => {
-    try {
-      // Get user profile
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', authUser.id)
-        .single();
-
-      if (profileError) {
-        console.error('Error loading profile:', profileError);
-        setLoading(false);
-        return;
-      }
-
-      // Get user stats
-      const { data: stats, error: statsError } = await supabase
-        .from('user_stats')
-        .select('*')
-        .eq('user_id', authUser.id)
-        .single();
-
-      if (statsError) {
-        console.error('Error loading stats:', statsError);
-        setLoading(false);
-        return;
-      }
-
-      const userObj: User = {
-        id: profile.id,
-        username: profile.username,
-        email: authUser.email || '',
-        balance: profile.balance,
-        isAdmin: profile.is_admin,
-        level: profile.level,
-        experience: profile.experience,
-        lastDailyBonus: profile.last_daily_bonus,
-        currency: profile.currency,
-        createdAt: profile.created_at,
-        stats: {
-          totalBets: stats.total_bets,
-          totalWins: stats.total_wins,
-          totalLosses: stats.total_losses,
-          biggestWin: stats.biggest_win,
-          biggestLoss: stats.biggest_loss,
-          totalWagered: stats.total_wagered,
-          totalWon: stats.total_won
-        }
-      };
-
-      setUser(userObj);
-      setIsAuthenticated(true);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error loading user profile:', error);
-      setLoading(false);
-    }
-  };
-
   const login = async (email: string, password: string): Promise<boolean> => {
-    if (!supabase) {
-      console.error('Supabase not initialized');
+    const users = localStorage_helpers.getUsers();
+    const foundUser = users.find(u => u.email === email);
+    
+    if (!foundUser) {
       return false;
     }
 
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        console.error('Login error:', error);
-        return false;
+    // In a real app, you'd verify the password hash
+    // For demo purposes, we'll just check if user exists
+    localStorage.setItem('charlies-odds-current-user', foundUser.id);
+    
+    const userStats = localStorage_helpers.getUserStats();
+    const stats = userStats.find(s => s.user_id === foundUser.id);
+    
+    const userObj: User = {
+      id: foundUser.id,
+      username: foundUser.username,
+      email: foundUser.email,
+      balance: foundUser.balance,
+      isAdmin: foundUser.is_admin,
+      level: foundUser.level,
+      experience: foundUser.experience,
+      lastDailyBonus: foundUser.last_daily_bonus,
+      currency: foundUser.currency,
+      createdAt: foundUser.created_at,
+      stats: {
+        totalBets: stats?.total_bets || 0,
+        totalWins: stats?.total_wins || 0,
+        totalLosses: stats?.total_losses || 0,
+        biggestWin: stats?.biggest_win || 0,
+        biggestLoss: stats?.biggest_loss || 0,
+        totalWagered: stats?.total_wagered || 0,
+        totalWon: stats?.total_won || 0
       }
+    };
 
-      return true;
-    } catch (error) {
-      console.error('Login error:', error);
-      return false;
-    }
+    setUser(userObj);
+    setIsAuthenticated(true);
+    return true;
   };
 
   const register = async (username: string, email: string, password: string): Promise<boolean> => {
-    if (!supabase) {
-      console.error('Supabase not initialized');
+    const users = localStorage_helpers.getUsers();
+    
+    // Check if username or email already exists
+    if (users.find(u => u.username === username || u.email === email)) {
       return false;
     }
 
-    try {
-      // Check if username already exists
-      const { data: existingProfile, error: checkError } = await supabase
-        .from('profiles')
-        .select('username')
-        .eq('username', username)
-        .single();
+    const newUser: Profile = {
+      id: Date.now().toString(),
+      username,
+      email,
+      balance: 1000,
+      is_admin: false,
+      level: 1,
+      experience: 0,
+      last_daily_bonus: null,
+      currency: 'USD',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
 
-      if (existingProfile && !checkError) {
-        return false;
+    const newStats: UserStats = {
+      id: Date.now().toString() + '_stats',
+      user_id: newUser.id,
+      total_bets: 0,
+      total_wins: 0,
+      total_losses: 0,
+      biggest_win: 0,
+      biggest_loss: 0,
+      total_wagered: 0,
+      total_won: 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    users.push(newUser);
+    localStorage_helpers.saveUsers(users);
+    
+    const allStats = localStorage_helpers.getUserStats();
+    allStats.push(newStats);
+    localStorage_helpers.saveUserStats(allStats);
+
+    localStorage.setItem('charlies-odds-current-user', newUser.id);
+
+    const userObj: User = {
+      id: newUser.id,
+      username: newUser.username,
+      email: newUser.email,
+      balance: newUser.balance,
+      isAdmin: newUser.is_admin,
+      level: newUser.level,
+      experience: newUser.experience,
+      lastDailyBonus: newUser.last_daily_bonus,
+      currency: newUser.currency,
+      createdAt: newUser.created_at,
+      stats: {
+        totalBets: 0,
+        totalWins: 0,
+        totalLosses: 0,
+        biggestWin: 0,
+        biggestLoss: 0,
+        totalWagered: 0,
+        totalWon: 0
       }
+    };
 
-      // Create auth user
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
-      if (error) {
-        console.error('Registration error:', error);
-        return false;
-      }
-
-      if (!data.user) {
-        return false;
-      }
-
-      // Create profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: data.user.id,
-          username,
-          email,
-          balance: 1000,
-          is_admin: false,
-          level: 1,
-          experience: 0,
-          currency: 'USD'
-        });
-
-      if (profileError) {
-        console.error('Profile creation error:', profileError);
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Registration error:', error);
-      return false;
-    }
+    setUser(userObj);
+    setIsAuthenticated(true);
+    return true;
   };
 
-  const logout = async () => {
-    if (!supabase) return;
-
-    try {
-      await supabase.auth.signOut();
-      setUser(null);
-      setIsAuthenticated(false);
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+  const logout = () => {
+    localStorage.removeItem('charlies-odds-current-user');
+    setUser(null);
+    setIsAuthenticated(false);
   };
   
   const getNextLevelRequirement = (): number => {
@@ -265,36 +239,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   };
 
-  const updateBalance = async (amount: number) => {
+  const updateBalance = (amount: number) => {
     if (!user) return;
-    if (!supabase) {
-      // Fallback to local state update if Supabase not available
-      setUser(prev => prev ? { ...prev, balance: prev.balance + amount } : null);
-      return;
-    }
 
     const newBalance = user.balance + amount;
-    
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ balance: newBalance })
-        .eq('id', user.id);
+    const users = localStorage_helpers.getUsers();
+    const updatedUsers = users.map(u => 
+      u.id === user.id ? { ...u, balance: newBalance, updated_at: new Date().toISOString() } : u
+    );
+    localStorage_helpers.saveUsers(updatedUsers);
 
-      if (error) {
-        console.error('Error updating balance:', error);
-        return;
-      }
-
-      setUser(prev => prev ? { ...prev, balance: newBalance } : null);
-    } catch (error) {
-      console.error('Error updating balance:', error);
-    }
+    setUser(prev => prev ? { ...prev, balance: newBalance } : null);
   };
 
-  const addExperience = async (amount: number) => {
+  const addExperience = (amount: number) => {
     if (!user) return;
-    if (!supabase) return;
 
     let newExperience = user.experience + amount;
     let newLevel = user.level;
@@ -305,29 +264,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       newLevel++;
     }
     
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ 
-          experience: newExperience, 
-          level: newLevel 
-        })
-        .eq('id', user.id);
+    const users = localStorage_helpers.getUsers();
+    const updatedUsers = users.map(u => 
+      u.id === user.id ? { 
+        ...u, 
+        experience: newExperience, 
+        level: newLevel,
+        updated_at: new Date().toISOString() 
+      } : u
+    );
+    localStorage_helpers.saveUsers(updatedUsers);
 
-      if (error) {
-        console.error('Error updating experience:', error);
-        return;
-      }
-
-      setUser(prev => prev ? { ...prev, experience: newExperience, level: newLevel } : null);
-    } catch (error) {
-      console.error('Error updating experience:', error);
-    }
+    setUser(prev => prev ? { ...prev, experience: newExperience, level: newLevel } : null);
   };
 
-  const claimDailyBonus = async (): Promise<number> => {
+  const claimDailyBonus = (): number => {
     if (!user) return 0;
-    if (!supabase) return 0;
 
     const today = new Date().toISOString().split('T')[0];
     if (user.lastDailyBonus === today) return 0;
@@ -335,62 +287,82 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const levelRewards = getLevelRewards(user.level);
     const bonusAmount = levelRewards.dailyBonus;
     
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ 
-          balance: user.balance + bonusAmount,
-          last_daily_bonus: today 
-        })
-        .eq('id', user.id);
+    const users = localStorage_helpers.getUsers();
+    const updatedUsers = users.map(u => 
+      u.id === user.id ? { 
+        ...u, 
+        balance: u.balance + bonusAmount,
+        last_daily_bonus: today,
+        updated_at: new Date().toISOString() 
+      } : u
+    );
+    localStorage_helpers.saveUsers(updatedUsers);
 
-      if (error) {
-        console.error('Error claiming daily bonus:', error);
-        return 0;
-      }
+    setUser(prev => prev ? { 
+      ...prev, 
+      balance: prev.balance + bonusAmount, 
+      lastDailyBonus: today 
+    } : null);
 
-      setUser(prev => prev ? { 
-        ...prev, 
-        balance: prev.balance + bonusAmount, 
-        lastDailyBonus: today 
-      } : null);
-
-      return bonusAmount;
-    } catch (error) {
-      console.error('Error claiming daily bonus:', error);
-      return 0;
-    }
+    return bonusAmount;
   };
 
   const updateStats = (betAmount: number, winAmount: number) => {
-    // Stats are now updated automatically via database triggers
+    if (!user) return;
+
+    const profit = winAmount - betAmount;
+    const isWin = profit > 0;
+    
+    const allStats = localStorage_helpers.getUserStats();
+    const updatedStats = allStats.map(s => {
+      if (s.user_id === user.id) {
+        return {
+          ...s,
+          total_bets: s.total_bets + 1,
+          total_wins: s.total_wins + (isWin ? 1 : 0),
+          total_losses: s.total_losses + (isWin ? 0 : 1),
+          biggest_win: Math.max(s.biggest_win, profit),
+          biggest_loss: Math.min(s.biggest_loss, profit),
+          total_wagered: s.total_wagered + betAmount,
+          total_won: s.total_won + winAmount,
+          updated_at: new Date().toISOString()
+        };
+      }
+      return s;
+    });
+    localStorage_helpers.saveUserStats(updatedStats);
+
+    // Update user stats in state
+    const updatedUserStats = updatedStats.find(s => s.user_id === user.id);
+    if (updatedUserStats) {
+      setUser(prev => prev ? {
+        ...prev,
+        stats: {
+          totalBets: updatedUserStats.total_bets,
+          totalWins: updatedUserStats.total_wins,
+          totalLosses: updatedUserStats.total_losses,
+          biggestWin: updatedUserStats.biggest_win,
+          biggestLoss: updatedUserStats.biggest_loss,
+          totalWagered: updatedUserStats.total_wagered,
+          totalWon: updatedUserStats.total_won
+        }
+      } : null);
+    }
+
     // Add experience for betting
     addExperience(Math.floor(betAmount / 10)); // 1 XP per $10 bet
   };
 
-  const setCurrency = async (currency: 'USD' | 'GBP' | 'EUR' | 'BTC' | 'ETH' | 'LTC') => {
+  const setCurrency = (currency: 'USD' | 'GBP' | 'EUR' | 'BTC' | 'ETH' | 'LTC') => {
     if (!user) return;
-    if (!supabase) {
-      // Fallback to local state update
-      setUser(prev => prev ? { ...prev, currency } : null);
-      return;
-    }
 
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ currency })
-        .eq('id', user.id);
+    const users = localStorage_helpers.getUsers();
+    const updatedUsers = users.map(u => 
+      u.id === user.id ? { ...u, currency, updated_at: new Date().toISOString() } : u
+    );
+    localStorage_helpers.saveUsers(updatedUsers);
 
-      if (error) {
-        console.error('Error updating currency:', error);
-        return;
-      }
-
-      setUser(prev => prev ? { ...prev, currency } : null);
-    } catch (error) {
-      console.error('Error updating currency:', error);
-    }
+    setUser(prev => prev ? { ...prev, currency } : null);
   };
 
   const formatCurrency = (amount: number): string => {

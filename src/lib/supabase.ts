@@ -1,13 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-export const supabase = supabaseUrl && supabaseAnonKey 
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null;
-
-// Enhanced types for our database tables
+// Local storage utilities for CharliesOdds
 export interface Profile {
   id: string;
   username: string;
@@ -135,3 +126,66 @@ export interface AdminGameConfig {
   updated_by: string | null;
   updated_at: string;
 }
+
+// Local storage helper functions
+export const localStorage_helpers = {
+  getUsers: (): Profile[] => {
+    return JSON.parse(localStorage.getItem('charlies-odds-users') || '[]');
+  },
+  
+  saveUsers: (users: Profile[]) => {
+    localStorage.setItem('charlies-odds-users', JSON.stringify(users));
+  },
+  
+  getUserStats: (): UserStats[] => {
+    return JSON.parse(localStorage.getItem('charlies-odds-user-stats') || '[]');
+  },
+  
+  saveUserStats: (stats: UserStats[]) => {
+    localStorage.setItem('charlies-odds-user-stats', JSON.stringify(stats));
+  },
+  
+  getBets: (): GameBet[] => {
+    return JSON.parse(localStorage.getItem('charlies-odds-bets') || '[]');
+  },
+  
+  saveBets: (bets: GameBet[]) => {
+    localStorage.setItem('charlies-odds-bets', JSON.stringify(bets));
+  },
+  
+  getSuggestions: (): Suggestion[] => {
+    return JSON.parse(localStorage.getItem('charlies-odds-suggestions') || '[]');
+  },
+  
+  saveSuggestions: (suggestions: Suggestion[]) => {
+    localStorage.setItem('charlies-odds-suggestions', JSON.stringify(suggestions));
+  },
+  
+  getGameConfig: (): AdminGameConfig[] => {
+    return JSON.parse(localStorage.getItem('charlies-odds-game-config') || '[]');
+  },
+  
+  saveGameConfig: (config: AdminGameConfig[]) => {
+    localStorage.setItem('charlies-odds-game-config', JSON.stringify(config));
+  }
+};
+
+// Initialize default data if not exists
+export const initializeDefaultData = () => {
+  // Initialize default game config
+  const existingConfig = localStorage_helpers.getGameConfig();
+  if (existingConfig.length === 0) {
+    const defaultConfig: AdminGameConfig[] = [
+      { id: '1', game_name: 'dice', enabled: true, min_bet: 0.01, max_bet: 1000, house_edge: 1, updated_by: null, updated_at: new Date().toISOString() },
+      { id: '2', game_name: 'limbo', enabled: true, min_bet: 0.01, max_bet: 1000, house_edge: 1, updated_by: null, updated_at: new Date().toISOString() },
+      { id: '3', game_name: 'crash', enabled: true, min_bet: 0.01, max_bet: 1000, house_edge: 1, updated_by: null, updated_at: new Date().toISOString() },
+      { id: '4', game_name: 'blackjack', enabled: true, min_bet: 0.01, max_bet: 1000, house_edge: 0.5, updated_by: null, updated_at: new Date().toISOString() },
+      { id: '5', game_name: 'plinko', enabled: true, min_bet: 0.01, max_bet: 1000, house_edge: 2, updated_by: null, updated_at: new Date().toISOString() },
+      { id: '6', game_name: 'spin-wheel', enabled: true, min_bet: 0.01, max_bet: 1000, house_edge: 5, updated_by: null, updated_at: new Date().toISOString() }
+    ];
+    localStorage_helpers.saveGameConfig(defaultConfig);
+  }
+};
+
+// Call initialization
+initializeDefaultData();
