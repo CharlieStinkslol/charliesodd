@@ -16,7 +16,10 @@ const Home = () => {
   const { user, formatCurrency } = useAuth();
   
   // Use user stats from auth context if available, otherwise fall back to game context
-  const stats = user?.stats || {
+  const stats = user?.stats ? {
+    ...user.stats,
+    winRate: user.stats.totalBets > 0 ? (user.stats.totalWins / user.stats.totalBets) * 100 : 0
+  } : {
     totalBets: 0,
     totalWins: 0,
     totalLosses: 0,

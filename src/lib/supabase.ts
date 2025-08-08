@@ -1,4 +1,15 @@
-// Local storage utilities for CharliesOdds
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables')
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+
+// Database types
 export interface Profile {
   id: string;
   username: string;
@@ -127,7 +138,215 @@ export interface AdminGameConfig {
   updated_at: string;
 }
 
-// Local storage helper functions
+// Supabase helper functions
+export const supabaseHelpers = {
+  // Profile functions
+  async getProfile(userId: string): Promise<Profile | null> {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    
+    if (error) {
+      console.error('Error fetching profile:', error);
+      return null;
+    }
+    
+    return data;
+  },
+
+  async updateProfile(userId: string, updates: Partial<Profile>): Promise<boolean> {
+    const { error } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('id', userId);
+    
+    if (error) {
+      console.error('Error updating profile:', error);
+      return false;
+    }
+    
+    return true;
+  },
+
+  async createProfile(profile: Omit<Profile, 'created_at' | 'updated_at'>): Promise<boolean> {
+    const { error } = await supabase
+      .from('profiles')
+      .insert([profile]);
+    
+    if (error) {
+      console.error('Error creating profile:', error);
+      return false;
+    }
+    
+    return true;
+  },
+
+  // User stats functions
+  async getUserStats(userId: string): Promise<UserStats | null> {
+    const { data, error } = await supabase
+      .from('user_stats')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+    
+    if (error) {
+      console.error('Error fetching user stats:', error);
+      return null;
+    }
+    
+    return data;
+  },
+
+  // Game bets functions
+  async getUserBets(userId: string, limit = 100): Promise<GameBet[]> {
+    const { data, error } = await supabase
+      .from('game_bets')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    
+    if (error) {
+      console.error('Error fetching user bets:', error);
+      return [];
+    }
+    
+    return data || [];
+  },
+
+  async addBet(bet: Omit<GameBet, 'id' | 'created_at'>): Promise<boolean> {
+    const { error } = await supabase
+      .from('game_bets')
+      .insert([bet]);
+    
+    if (error) {
+      console.error('Error adding bet:', error);
+      return false;
+    }
+    
+    return true;
+  },
+
+  // Game settings functions
+  async saveGameSettings(userId: string, gameName: string, settingName: string, settings: any): Promise<boolean> {
+    const { error } = await supabase
+      .from('game_settings')
+      .upsert([{
+        user_id: userId,
+        game_name: gameName,
+        setting_name: settingName,
+        settings
+      }]);
+    
+    if (error) {
+      console.error('Error saving game settings:', error);
+      return false;
+    }
+    
+    return true;
+  },
+
+  async loadGameSettings(userId: string, gameName: string): Promise<any> {
+    const { data, error } = await supabase
+      .from('game_settings')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('game_name', gameName);
+    
+    if (error) {
+      console.error('Error loading game settings:', error);
+      return {};
+    }
+    
+    return data || [];
+  },
+
+  // Suggestions functions
+  async getSuggestions(): Promise<Suggestion[]> {
+    const { data, error } = await supabase
+      .from('suggestions')
+      .select(`
+        *,
+        profiles:user_id (username),
+        admin_responses (
+          id,
+          response_text,
+          created_at,
+          profiles:admin_id (username)
+        )
+      `)
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching suggestions:', error);
+      return [];
+    }
+    
+    return data || [];
+  },
+
+  async createSuggestion(suggestion: Omit<Suggestion, 'id' | 'created_at' | 'updated_at' | 'upvotes' | 'downvotes'>): Promise<boolean> {
+    const { error } = await supabase
+      .from('suggestions')
+      .insert([suggestion]);
+    
+    if (error) {
+      console.error('Error creating suggestion:', error);
+      return false;
+    }
+    
+    return true;
+  },
+
+  async voteSuggestion(userId: string, suggestionId: string, voteType: 'up' | 'down'): Promise<boolean> {
+    const { error } = await supabase
+      .from('suggestion_votes')
+      .upsert([{
+        user_id: userId,
+        suggestion_id: suggestionId,
+        vote_type: voteType
+      }]);
+    
+    if (error) {
+      console.error('Error voting on suggestion:', error);
+      return false;
+    }
+    
+    return true;
+  },
+
+  // Admin game config functions
+  async getGameConfig(): Promise<AdminGameConfig[]> {
+    const { data, error } = await supabase
+      .from('admin_game_config')
+      .select('*')
+      .order('game_name');
+    
+    if (error) {
+      console.error('Error fetching game config:', error);
+      return [];
+    }
+    
+    return data || [];
+  },
+
+  async updateGameConfig(gameConfig: Partial<AdminGameConfig> & { game_name: string }): Promise<boolean> {
+    const { error } = await supabase
+      .from('admin_game_config')
+      .upsert([gameConfig]);
+    
+    if (error) {
+      console.error('Error updating game config:', error);
+      return false;
+    }
+    
+    return true;
+  }
+};
+
+// Legacy localStorage helpers for backward compatibility during migration
 export const localStorage_helpers = {
   getUsers: (): Profile[] => {
     return JSON.parse(localStorage.getItem('charlies-odds-users') || '[]');

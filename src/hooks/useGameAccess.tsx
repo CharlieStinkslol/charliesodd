@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { localStorage_helpers } from '../lib/supabase';
+import { supabase, supabaseHelpers, localStorage_helpers } from '../lib/supabase';
 
 interface GameSettings {
   enabled: boolean;
@@ -11,24 +11,51 @@ interface GameSettings {
 export const useGameAccess = (gameName: string) => {
   const [gameSettings, setGameSettings] = useState<GameSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [useSupabase, setUseSupabase] = useState(false);
+
+  // Check if Supabase is configured
+  useEffect(() => {
+    const checkSupabaseConfig = () => {
+      const hasUrl = !!import.meta.env.VITE_SUPABASE_URL;
+      const hasKey = !!import.meta.env.VITE_SUPABASE_ANON_KEY;
+      setUseSupabase(hasUrl && hasKey);
+    };
+    
+    checkSupabaseConfig();
+  }, []);
 
   useEffect(() => {
     const loadGameSettings = () => {
-      const allConfig = localStorage_helpers.getGameConfig();
-      const config = allConfig.find(c => c.game_name === gameName);
-      
-      setGameSettings({
-        enabled: config?.enabled ?? true,
-        minBet: config?.min_bet ?? 0.01,
-        maxBet: config?.max_bet ?? 1000,
-        houseEdge: config?.house_edge ?? 1
-      });
-      
-      setIsLoading(false);
+      if (useSupabase) {
+        supabaseHelpers.getGameConfig().then(allConfig => {
+          const config = allConfig.find(c => c.game_name === gameName);
+          
+          setGameSettings({
+            enabled: config?.enabled ?? true,
+            minBet: config?.min_bet ?? 0.01,
+            maxBet: config?.max_bet ?? 1000,
+            houseEdge: config?.house_edge ?? 1
+          });
+          
+          setIsLoading(false);
+        });
+      } else {
+        const allConfig = localStorage_helpers.getGameConfig();
+        const config = allConfig.find(c => c.game_name === gameName);
+        
+        setGameSettings({
+          enabled: config?.enabled ?? true,
+          minBet: config?.min_bet ?? 0.01,
+          maxBet: config?.max_bet ?? 1000,
+          houseEdge: config?.house_edge ?? 1
+        });
+        
+        setIsLoading(false);
+      }
     };
 
     loadGameSettings();
-  }, [gameName]);
+  }, [gameName, useSupabase]);
 
   const validateBetAmount = (amount: number): { isValid: boolean; message?: string } => {
     if (!gameSettings) return { isValid: true };

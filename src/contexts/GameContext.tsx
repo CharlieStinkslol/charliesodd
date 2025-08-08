@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { localStorage_helpers, type GameBet as LocalGameBet, type GameSetting } from '../lib/supabase';
+import { supabase, supabaseHelpers, localStorage_helpers, type GameBet as LocalGameBet, type GameSetting } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 
 interface GameBet {
@@ -62,7 +62,19 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   const [seed, setSeedState] = useState<string>('');
   const [seedCounter, setSeedCounter] = useState<number>(0);
   const [gameSettings, setGameSettings] = useState<GameSettings>({});
+  const [useSupabase, setUseSupabase] = useState(false);
   const { user } = useAuth();
+
+  // Check if Supabase is configured
+  useEffect(() => {
+    const checkSupabaseConfig = () => {
+      const hasUrl = !!import.meta.env.VITE_SUPABASE_URL;
+      const hasKey = !!import.meta.env.VITE_SUPABASE_ANON_KEY;
+      setUseSupabase(hasUrl && hasKey);
+    };
+    
+    checkSupabaseConfig();
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -84,20 +96,36 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   const loadUserBets = () => {
     if (!user) return;
 
-    const allBets = localStorage_helpers.getBets();
-    const userBets = allBets.filter(bet => bet.user_id === user.id);
-    
-    const formattedBets: GameBet[] = userBets.map(bet => ({
-      id: bet.id,
-      game: bet.game_name,
-      betAmount: bet.bet_amount,
-      winAmount: bet.win_amount,
-      multiplier: bet.multiplier,
-      timestamp: new Date(bet.created_at),
-      result: bet.game_result
-    }));
+    if (useSupabase) {
+      supabaseHelpers.getUserBets(user.id).then(userBets => {
+        const formattedBets: GameBet[] = userBets.map(bet => ({
+          id: bet.id,
+          game: bet.game_name,
+          betAmount: bet.bet_amount,
+          winAmount: bet.win_amount,
+          multiplier: bet.multiplier,
+          timestamp: new Date(bet.created_at),
+          result: bet.game_result
+        }));
 
-    setBets(formattedBets.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()));
+        setBets(formattedBets.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()));
+      });
+    } else {
+      const allBets = localStorage_helpers.getBets();
+      const userBets = allBets.filter(bet => bet.user_id === user.id);
+      
+      const formattedBets: GameBet[] = userBets.map(bet => ({
+        id: bet.id,
+        game: bet.game_name,
+        betAmount: bet.bet_amount,
+        winAmount: bet.win_amount,
+        multiplier: bet.multiplier,
+        timestamp: new Date(bet.created_at),
+        result: bet.game_result
+      }));
+
+      setBets(formattedBets.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()));
+    }
   };
 
   const loadUserGameSettings = () => {
@@ -122,21 +150,35 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     const updatedBets = [newBet, ...bets].slice(0, 1000);
     setBets(updatedBets);
 
-    // Save to localStorage
-    const allBets = localStorage_helpers.getBets();
-    const localBet: LocalGameBet = {
-      id: newBet.id,
-      user_id: user.id,
-      game_name: bet.game as any,
-      bet_amount: bet.betAmount,
-      win_amount: bet.winAmount,
-      multiplier: bet.multiplier,
-      game_result: bet.result,
-      created_at: newBet.timestamp.toISOString()
-    };
-    
-    allBets.push(localBet);
-    localStorage_helpers.saveBets(allBets);
+    if (useSupabase) {
+      // Save to Supabase
+      const supabaseBet: Omit<LocalGameBet, 'id' | 'created_at'> = {
+        user_id: user.id,
+        game_name: bet.game as any,
+        bet_amount: bet.betAmount,
+        win_amount: bet.winAmount,
+        multiplier: bet.multiplier,
+        game_result: bet.result
+      };
+      
+      supabaseHelpers.addBet(supabaseBet);
+    } else {
+      // Save to localStorage
+      const allBets = localStorage_helpers.getBets();
+      const localBet: LocalGameBet = {
+        id: newBet.id,
+        user_id: user.id,
+        game_name: bet.game as any,
+        bet_amount: bet.betAmount,
+        win_amount: bet.winAmount,
+        multiplier: bet.multiplier,
+        game_result: bet.result,
+        created_at: newBet.timestamp.toISOString()
+      };
+      
+      allBets.push(localBet);
+      localStorage_helpers.saveBets(allBets);
+    }
   };
 
   const clearHistory = () => {
@@ -176,12 +218,16 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   const saveGameSettings = (gameName: string, settings: any) => {
     if (!user) return;
 
-    const updatedSettings = {
-      ...gameSettings,
-      [gameName]: settings
-    };
-    setGameSettings(updatedSettings);
-    localStorage.setItem(`charlies-odds-game-settings-${user.id}`, JSON.stringify(updatedSettings));
+    if (useSupabase) {
+      supabaseHelpers.saveGameSettings(user.id, gameName, 'default', settings);
+    } else {
+      const updatedSettings = {
+        ...gameSettings,
+        [gameName]: settings
+      };
+      setGameSettings(updatedSettings);
+      localStorage.setItem(`charlies-odds-game-settings-${user.id}`, JSON.stringify(updatedSettings));
+    }
   };
 
   const loadGameSettings = (gameName: string) => {
