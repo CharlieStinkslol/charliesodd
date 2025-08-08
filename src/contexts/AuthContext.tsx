@@ -4,7 +4,7 @@ import { supabase, supabaseHelpers, localStorage_helpers, type Profile, type Use
 interface User {
   id: string;
   username: string;
-  email: string;
+  email?: string;
   balance: number;
   isAdmin: boolean;
   createdAt: string;
@@ -26,8 +26,8 @@ interface User {
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
-  register: (username: string, email: string, password: string) => Promise<boolean>;
+  login: (username: string, password: string) => Promise<boolean>;
+  register: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   updateBalance: (amount: number) => void;
   updateStats: (betAmount: number, winAmount: number) => void;
@@ -110,53 +110,48 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (username: string, password: string): Promise<boolean> => {
     if (useSupabase) {
       try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
+        const profile = await supabaseHelpers.authenticateUser(username, password);
         
-        if (error) {
-          console.error('Supabase login error:', error);
+        if (!profile) {
+          console.error('Authentication failed');
           return false;
         }
         
-        if (data.user) {
-          const profile = await supabaseHelpers.getProfile(data.user.id);
-          if (profile) {
-            const userStats = await supabaseHelpers.getUserStats(data.user.id);
-            
-            const userObj: User = {
-              id: profile.id,
-              username: profile.username,
-              email: profile.email,
-              balance: profile.balance,
-              isAdmin: profile.is_admin,
-              level: profile.level,
-              experience: profile.experience,
-              lastDailyBonus: profile.last_daily_bonus,
-              currency: profile.currency,
-              createdAt: profile.created_at,
-              stats: {
-                totalBets: userStats?.total_bets || 0,
-                totalWins: userStats?.total_wins || 0,
-                totalLosses: userStats?.total_losses || 0,
-                biggestWin: userStats?.biggest_win || 0,
-                biggestLoss: userStats?.biggest_loss || 0,
-                totalWagered: userStats?.total_wagered || 0,
-                totalWon: userStats?.total_won || 0
-              }
-            };
-
-            setUser(userObj);
-            setIsAuthenticated(true);
-            return true;
-          }
-        }
+        const userStats = await supabaseHelpers.getUserStats(profile.id);
         
-        return false;
+        const userObj: User = {
+          id: profile.id,
+          username: profile.username,
+          email: profile.email,
+          balance: profile.balance,
+          isAdmin: profile.is_admin,
+          level: profile.level,
+          experience: profile.experience,
+          lastDailyBonus: profile.last_daily_bonus,
+          currency: profile.currency,
+          createdAt: profile.created_at,
+          stats: {
+            totalBets: userStats?.total_bets || 0,
+            totalWins: userStats?.total_wins || 0,
+            totalLosses: userStats?.total_losses || 0,
+            biggestWin: userStats?.biggest_win || 0,
+            biggestLoss: userStats?.biggest_loss || 0,
+            totalWagered: userStats?.total_wagered || 0,
+            totalWon: userStats?.total_won || 0
+          }
+        };
+
+        setUser(userObj);
+        setIsAuthenticated(true);
+        
+        // Store session in localStorage for persistence
+        localStorage.setItem('charlies-odds-current-user', profile.id);
+        localStorage.setItem('charlies-odds-username', username);
+        
+        return true;
       } catch (error) {
         console.error('Login error:', error);
         return false;
@@ -164,13 +159,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } else {
       // Fallback to localStorage
       const users = localStorage_helpers.getUsers();
-      const foundUser = users.find(u => u.email === email);
+      const foundUser = users.find(u => u.username === username);
       
       if (!foundUser) {
         return false;
       }
 
       localStorage.setItem('charlies-odds-current-user', foundUser.id);
+      localStorage.setItem('charlies-odds-username', username);
       
       const userStats = localStorage_helpers.getUserStats();
       const stats = userStats.find(s => s.user_id === foundUser.id);
@@ -203,64 +199,46 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const register = async (username: string, email: string, password: string): Promise<boolean> => {
+  const register = async (username: string, password: string): Promise<boolean> => {
     if (useSupabase) {
       try {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password
-        });
+        const result = await supabaseHelpers.registerUser(username, password);
         
-        if (error) {
-          console.error('Supabase registration error:', error);
+        if (!result.success || !result.user) {
+          console.error('Registration failed:', result.message);
           return false;
         }
         
-        if (data.user) {
-          // Create profile in database
-          const profile: Omit<Profile, 'created_at' | 'updated_at'> = {
-            id: data.user.id,
-            username,
-            email,
-            balance: 1000,
-            is_admin: false,
-            level: 1,
-            experience: 0,
-            last_daily_bonus: null,
-            currency: 'USD'
-          };
-          
-          const success = await supabaseHelpers.createProfile(profile);
-          if (success) {
-            const userObj: User = {
-              id: data.user.id,
-              username,
-              email,
-              balance: 1000,
-              isAdmin: false,
-              level: 1,
-              experience: 0,
-              lastDailyBonus: null,
-              currency: 'USD',
-              createdAt: new Date().toISOString(),
-              stats: {
-                totalBets: 0,
-                totalWins: 0,
-                totalLosses: 0,
-                biggestWin: 0,
-                biggestLoss: 0,
-                totalWagered: 0,
-                totalWon: 0
-              }
-            };
-
-            setUser(userObj);
-            setIsAuthenticated(true);
-            return true;
+        const userObj: User = {
+          id: result.user.id,
+          username: result.user.username,
+          email: result.user.email,
+          balance: result.user.balance,
+          isAdmin: result.user.is_admin,
+          level: result.user.level,
+          experience: result.user.experience,
+          lastDailyBonus: result.user.last_daily_bonus,
+          currency: result.user.currency,
+          createdAt: result.user.created_at,
+          stats: {
+            totalBets: 0,
+            totalWins: 0,
+            totalLosses: 0,
+            biggestWin: 0,
+            biggestLoss: 0,
+            totalWagered: 0,
+            totalWon: 0
           }
-        }
+        };
+
+        setUser(userObj);
+        setIsAuthenticated(true);
         
-        return false;
+        // Store session in localStorage for persistence
+        localStorage.setItem('charlies-odds-current-user', result.user.id);
+        localStorage.setItem('charlies-odds-username', username);
+        
+        return true;
       } catch (error) {
         console.error('Registration error:', error);
         return false;
@@ -270,14 +248,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const users = localStorage_helpers.getUsers();
       
       // Check if username or email already exists
-      if (users.find(u => u.username === username || u.email === email)) {
+      if (users.find(u => u.username === username)) {
         return false;
       }
 
       const newUser: Profile = {
         id: Date.now().toString(),
         username,
-        email,
+        email: username + '@demo.local',
         balance: 1000,
         is_admin: false,
         level: 1,
@@ -310,6 +288,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage_helpers.saveUserStats(allStats);
 
       localStorage.setItem('charlies-odds-current-user', newUser.id);
+      localStorage.setItem('charlies-odds-username', username);
 
       const userObj: User = {
         id: newUser.id,
@@ -340,11 +319,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = () => {
-    if (useSupabase) {
-      supabase.auth.signOut();
-    } else {
-      localStorage.removeItem('charlies-odds-current-user');
-    }
+    localStorage.removeItem('charlies-odds-current-user');
+    localStorage.removeItem('charlies-odds-username');
     setUser(null);
     setIsAuthenticated(false);
   };

@@ -13,7 +13,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 export interface Profile {
   id: string;
   username: string;
-  email: string;
+  email?: string;
   balance: number;
   is_admin: boolean;
   level: number;
@@ -156,6 +156,63 @@ export const supabaseHelpers = {
     return data;
   },
 
+  // Username-based authentication
+  async authenticateUser(username: string, password: string): Promise<Profile | null> {
+    const { data, error } = await supabase
+      .rpc('authenticate_user', {
+        username_input: username,
+        password_input: password
+      });
+    
+    if (error || !data || data.length === 0) {
+      console.error('Authentication error:', error);
+      return null;
+    }
+    
+    const user = data[0];
+    return {
+      id: user.user_id,
+      username: user.username,
+      email: user.username + '@demo.local',
+      balance: user.balance,
+      is_admin: user.is_admin,
+      level: user.level,
+      experience: user.experience,
+      last_daily_bonus: user.last_daily_bonus,
+      currency: user.currency,
+      created_at: user.created_at,
+      updated_at: user.created_at
+    };
+  },
+
+  // Username-based registration
+  async registerUser(username: string, password: string): Promise<{ success: boolean; message: string; user?: Profile }> {
+    const { data, error } = await supabase
+      .rpc('register_user', {
+        username_input: username,
+        password_input: password
+      });
+    
+    if (error || !data || data.length === 0) {
+      console.error('Registration error:', error);
+      return { success: false, message: 'Registration failed' };
+    }
+    
+    const result = data[0];
+    
+    if (!result.success) {
+      return { success: false, message: result.message };
+    }
+    
+    // Fetch the created user profile
+    const profile = await this.getProfile(result.user_id);
+    
+    return { 
+      success: true, 
+      message: result.message,
+      user: profile || undefined
+    };
+  },
   async updateProfile(userId: string, updates: Partial<Profile>): Promise<boolean> {
     const { error } = await supabase
       .from('profiles')

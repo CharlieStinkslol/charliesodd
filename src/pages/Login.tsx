@@ -4,7 +4,7 @@ import { LogIn, User, Shield, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 const Login = () => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -18,15 +18,15 @@ const Login = () => {
     setIsLoading(true);
     setError('');
 
-    console.log('Attempting login with:', { email, password });
+    console.log('Attempting login with:', { username, password });
 
     try {
-      const success = await login(email, password);
+      const success = await login(username, password);
       if (success) {
         console.log('Login successful, navigating to home');
         navigate('/');
       } else {
-        setError('Invalid email or password');
+        setError('Invalid username or password');
       }
     } catch (err) {
       console.error('Login error:', err);
@@ -53,14 +53,14 @@ const Login = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Email Address
+                Username
               </label>
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                placeholder="Enter your email"
+                placeholder="Enter your username"
                 required
                 disabled={isLoading}
               />

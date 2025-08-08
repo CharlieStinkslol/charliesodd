@@ -5,7 +5,6 @@ import { useAuth } from '../contexts/AuthContext';
 
 const Register = () => {
   const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -34,11 +33,11 @@ const Register = () => {
     }
 
     try {
-      const success = await register(username, email, password);
+      const success = await register(username, password);
       if (success) {
         navigate('/');
       } else {
-        setError('Username or email already exists');
+        setError('Username already exists');
       }
     } catch (err) {
       setError('An error occurred during registration');
@@ -77,22 +76,6 @@ const Register = () => {
               />
             </div>
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
-                Email Address
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-                placeholder="Enter your email"
-              />
-            </div>
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">

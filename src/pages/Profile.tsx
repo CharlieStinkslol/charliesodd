@@ -25,7 +25,6 @@ const Profile = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [editForm, setEditForm] = useState({
     username: '',
-    email: '',
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
@@ -38,7 +37,6 @@ const Profile = () => {
     if (user) {
       setEditForm({
         username: user.username,
-        email: user.email,
         currentPassword: '',
         newPassword: '',
         confirmPassword: ''
@@ -253,7 +251,6 @@ const Profile = () => {
         return {
           ...u,
           username: editForm.username,
-          email: editForm.email
         };
       }
       return u;
@@ -320,7 +317,7 @@ const Profile = () => {
               </div>
               <div>
                 <h1 className="text-2xl md:text-3xl font-bold text-white">{user.username}</h1>
-                <p className="text-gray-400">{user.email}</p>
+                <p className="text-gray-400">Demo Account</p>
                 <div className="flex items-center mt-2 space-x-4">
                   {user.isAdmin && (
                     <span className="bg-red-600 text-white px-2 py-1 rounded-full text-xs mr-2 flex items-center">
@@ -396,15 +393,6 @@ const Profile = () => {
                   type="text"
                   value={editForm.username}
                   onChange={(e) => setEditForm(prev => ({ ...prev, username: e.target.value }))}
-                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
-                <input
-                  type="email"
-                  value={editForm.email}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
                   className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
                 />
               </div>

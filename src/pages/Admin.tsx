@@ -384,7 +384,7 @@ const Admin = () => {
                                 </div>
                                 <div>
                                   <div className="text-white font-medium">{userData.username}</div>
-                                  <div className="text-gray-400 text-sm">{userData.email || 'No email'}</div>
+                                  <div className="text-gray-400 text-sm">Demo Account</div>
                                 </div>
                               </div>
                             </td>
